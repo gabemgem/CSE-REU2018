@@ -1,0 +1,70 @@
+
+//function to find separator characters in a string in parallel
+input: string S
+output: int array A
+
+def function FindSeparators(S):
+
+	vector<int> escape
+	vector<int> open
+	vector<int> close
+	for all c in S in parallel:
+		escape[thid] = (S[thid]==ESC)
+		open[thid] = (S[thid]==OPEN)
+		close[thid] = (S[thid]==CLOSE)
+
+	//function for each character:
+	//D(i) = (D(i-1) & (!C(i) | E(i-1)) | O(i)
+
+	vector<vector<int> > function
+	function[0][0] = function[0][1] = open[0]
+
+	for all c in S in parallel:
+		function[thid+1][0] = open[thid+1]
+		function[thid+1][1] = !close[thid+1] | escape[thid] | open[thid+1]
+
+	vector<int> delimited
+	delimited[0] = open[0]
+
+	parallelScan(function, Compose)
+
+	for all c in S in parallel:
+		delimited[thid] = function[thid][delimited[0]]
+
+	vector<int> separator
+	for all c in S in parallel:
+		if c is SEP && !delimited[thid]:
+			separator[thid] = 1
+
+	parallelScan(separator, +)
+
+	vector<int> A
+	for all i in separator in parallel:
+		if separator[thid] is not separator[thid+1]:
+			A[separator[thid]] = thid
+
+	return A
+
+
+//function to compose two 2-variable boolean functions
+input: boolean vectors f, g
+output: boolean vector h
+
+def function Compose(f, g):
+	h[0] = g[f[0]]
+	h[1] = g[f[1]]
+
+	return h
+
+
+//function to perform a parallel scan on a vector with a specific operation
+input: vector F, operator O
+output: vector g
+
+def function parallelScan:
+	Conduct parallel scan on F using O
+	Place new values for F into g
+
+	return g
+
+
