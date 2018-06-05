@@ -1,9 +1,9 @@
 
 //function to find separator characters in a string in parallel
-input: string S
+input: string S, char ESC, OPEN, CLOSE
 output: int array A
 
-def function FindSeparators(S):
+def function FindSeparators(S, ESC, OPEN, CLOSE):
 
 	vector<int> escape
 	vector<int> open
