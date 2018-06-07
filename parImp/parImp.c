@@ -1,6 +1,7 @@
-#define PROGRAM_FILE "YOUR_FILE.cl"
-#define KERNEL_FUNC "YOUR_KERNEL"
-#define INPUT_SIZE 64//Use if input size is already known
+#define INPUT_FILE "input.txt"
+#define PROGRAM_FILE "findSep.cl"
+#define KERNEL_FUNC "findSep"
+//#define INPUT_SIZE 64//Use if input size is already known
 
 #include <math.h>
 #include <stdio.h>
@@ -92,6 +93,26 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    return program;
 }
 
+void read_from_file(char* line, ssize_t* len) {
+   FILE *fp;
+   line = NULL;
+   size_t l = 0;
+
+   fp = fopen(INPUT_FILE);
+   if(!fp) {
+      printf("Couldn't open input file");
+      exit(1);
+   }
+
+   if(*len = getline(&line, &l, fp) == -1) {
+      printf("Couldn't read input file");
+      exit(1);
+   }
+
+   fclose(fp);
+
+}
+
 int main() {
 
    /* OpenCL structures */
@@ -104,15 +125,16 @@ int main() {
    size_t local_size, global_size;
 
    /* Data and buffers */
-   float data[INPUT_SIZE];
-   float sum[2], total, actual_sum;
+   char* input_string;
+   ssize_t* input_length;
+   char* specChars = ",[]\\";
+
    cl_mem input_buffer, output_buffer;
    cl_int num_groups;
 
-   /* Initialize data if just testing*/
-   /*for(i=0; i<INPUT_SIZE; i++) {
-      data[i] = 1.0f*i;
-   }*/
+   /* Get data from file */
+   read_from_file(input_string, input_length);
+   uint* out_array = malloc(input_length*sizeof(uint));
 
    /* Create device and context */
    device = create_device();
@@ -126,16 +148,16 @@ int main() {
    program = build_program(context, device, PROGRAM_FILE);
 
    /* Create data buffer */
-   global_size = 8;//Total NUM THREADS
+   global_size = 256;//Total NUM THREADS
    local_size = 4;//NUM THREADS per BLOCK
    num_groups = global_size/local_size;//NUM BLOCKS
    
    /* CHANGE "sizeof" TO INPUT DATA TYPE */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-         CL_MEM_COPY_HOST_PTR, INPUT_SIZE * sizeof(DATA_TYPE), data, &err);
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
    
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, num_groups * sizeof(DATA_TYPE), sum, &err);
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(uint), out_array, &err);
    if(err < 0) {
       perror("Couldn't create a buffer");
       exit(1);   
@@ -158,8 +180,9 @@ int main() {
    /* Create kernel arguments */
    /* Change according to your kernel */
    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(kernel, 1, local_size * sizeof(float), NULL);
+   err |= clSetKernelArg(kernel, 1, local_size * sizeof(uint), NULL);
    err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(kernel, 3, sizeof(&specChars), &specChars)
    if(err < 0) {
       perror("Couldn't create a kernel argument");
       exit(1);
@@ -195,6 +218,8 @@ int main() {
 	*/
    
    /* Deallocate resources */
+   free(input_string);
+   free(input_length);
    clReleaseKernel(kernel);
    clReleaseMemObject(output_buffer);
    clReleaseMemObject(input_buffer);

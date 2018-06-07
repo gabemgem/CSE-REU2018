@@ -1,18 +1,39 @@
-__kernel void add_numbers(__global float4* data, 
-      __local float* local_result, __global float* group_result) {
+/* specChars: SEP, OPEN, CLOSE, ESC */
 
-   float sum;
-   float4 input1, input2, sum_vector;
+__kernel void findSep(__global char* S, 
+      __local uint* local_result, __global uint* group_result,
+       __global char* specChars, __global uint S_length, 
+       __global uint* escape, __global uint* open, __global uint* close,
+       __global uint** function, __global uint* delimited,
+       __global uint* separator) {
+
+   
    uint global_addr, local_addr;
 
-   global_addr = get_global_id(0) * 2;
-   input1 = data[global_addr];
-   input2 = data[global_addr+1];
-   sum_vector = input1 + input2;
+   uint global_addr = get_global_id(0);
+   char input = S[global_addr];
 
-   local_addr = get_local_id(0);
-   local_result[local_addr] = sum_vector.s0 + sum_vector.s1 + 
-                              sum_vector.s2 + sum_vector.s3; 
+   uint local_addr = get_local_id(0);
+   
+   open[global_addr] = (input==specChars[1]);
+   close[global_addr] = (input==specChars[2]);
+   escape[global_addr] = (input==specChars[3]);
+
+   uint func0 = open[global_addr];
+   uint func1 = !close[global_addr] || escape[global_addr] || open[global_addr];
+   function[global_addr] = {func0, func1};
+
+   parallelScan(function, Compose);
+
+   delimited[global_addr] = function[global_addr][delimited[0]];
+   separator[global_addr] = (input==SEP) && !delimited[global_addr];
+
+   parallelScan(separator, +);
+
+   if(separator[global_addr] != separator[global_addr+1]) {
+      group_result[separator[global_addr]] = global_addr;
+   }
+
    barrier(CLK_LOCAL_MEM_FENCE);
 
    if(get_local_id(0) == 0) {
