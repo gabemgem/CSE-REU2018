@@ -138,8 +138,6 @@ int main() {
    /*Shared memory for kernel*/
    uint* out_array = malloc(input_length*sizeof(uint));
    uint* escape = malloc(input_length*sizeof(uint));
-   uint* open = malloc(input_length*sizeof(uint));
-   uint* close = malloc(input_length*sizeof(uint));
    uint* function = malloc(input_length*sizeof(uint)*2);
    uint* delimited = malloc(input_length*sizeof(uint));
    uint* separator = malloc(input_length*sizeof(uint));
@@ -156,8 +154,8 @@ int main() {
    program = build_program(context, device, PROGRAM_FILE);
 
    /* Create data buffer */
-   global_size = 256;//Total NUM THREADS
-   local_size = 4;//NUM THREADS per BLOCK
+   global_size = 128;//Total NUM THREADS
+   local_size = 8;//NUM THREADS per BLOCK
    num_groups = global_size/local_size;//NUM BLOCKS
    
    /* CHANGE "sizeof" TO INPUT DATA TYPE */
@@ -232,6 +230,11 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
+   free(out_array);
+   free(escape);
+   free(function);
+   free(delimited);
+   free(separator);
    clReleaseKernel(kernel);
    clReleaseMemObject(output_buffer);
    clReleaseMemObject(input_buffer);
