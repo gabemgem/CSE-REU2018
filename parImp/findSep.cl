@@ -19,6 +19,7 @@ __kernel void findSep(__global char* S,  __global uint* group_result,
 
    uint func0 = open;
    uint func1 = !close || escape[global_addr] || open;
+   //function[global_addr] = malloc(2*uint);?
    function[global_addr] = {func0, func1};
 
    parallelScan(function, Compose);
@@ -32,13 +33,4 @@ __kernel void findSep(__global char* S,  __global uint* group_result,
       group_result[separator[global_addr]] = global_addr;
    }
 
-   barrier(CLK_LOCAL_MEM_FENCE);
-
-   if(get_local_id(0) == 0) {
-      sum = 0.0f;
-      for(int i=0; i<get_local_size(0); i++) {
-         sum += local_result[i];
-      }
-      group_result[get_group_id(0)] = sum;
-   }
 }
