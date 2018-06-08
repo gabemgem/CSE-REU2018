@@ -13,14 +13,13 @@ __kernel void findSep(__global char* S,  __global uint* group_result,
 
    uint local_addr = get_local_id(0);
    
-   uint open = (input==specChars[1]);
-   uint close = (input==specChars[2]);
+   char open = (input==specChars[1]);
+   char close = (input==specChars[2]);
    escape[global_addr] = (input==specChars[3]);
 
-   uint func0 = open;
-   uint func1 = !close || escape[global_addr] || open;
-   //function[global_addr] = malloc(2*uint);?
-   function[global_addr] = {func0, func1};
+   function[global_addr*2] = open;
+   function[(global_addr*2)+1] = !close || 
+                                 escape[global_addr-1] || open;
 
    parallelScan(function, Compose);
 

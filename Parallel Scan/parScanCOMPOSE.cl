@@ -51,7 +51,6 @@ inline uint2 compose(uint f0, uint f1, uint g0, uint g1) {
 __kernel void parScanCompose(
 	__global 	uint* data,	//length n
 	__local 	uint* x,	//length m
-	__global 	uint* part,	//length m
 				uint n) {
 
 	int wx = get_local_size(0);

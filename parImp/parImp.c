@@ -140,7 +140,7 @@ int main() {
    uint* escape = malloc(input_length*sizeof(uint));
    uint* open = malloc(input_length*sizeof(uint));
    uint* close = malloc(input_length*sizeof(uint));
-   uint** function = malloc(input_length*sizeof(uint*));
+   uint* function = malloc(input_length*sizeof(uint)*2);
    uint* delimited = malloc(input_length*sizeof(uint));
    uint* separator = malloc(input_length*sizeof(uint));
 
