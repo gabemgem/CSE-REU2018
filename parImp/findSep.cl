@@ -1,11 +1,9 @@
 /* specChars: SEP, OPEN, CLOSE, ESC */
 
-__kernel void findSep(__global char* S, 
-      __local uint* local_result, __global uint* group_result,
+__kernel void findSep(__global char* S,  __global uint* group_result,
        __global char* specChars, __global uint S_length, 
-       __global uint* escape, __global uint* open, __global uint* close,
-       __global uint** function, __global uint* delimited,
-       __global uint* separator) {
+       __global uint* escape, __global uint** function,
+       __global uint* delimited, __global uint* separator) {
 
    
    uint global_addr, local_addr;
@@ -15,12 +13,12 @@ __kernel void findSep(__global char* S,
 
    uint local_addr = get_local_id(0);
    
-   open[global_addr] = (input==specChars[1]);
-   close[global_addr] = (input==specChars[2]);
+   uint open = (input==specChars[1]);
+   uint close = (input==specChars[2]);
    escape[global_addr] = (input==specChars[3]);
 
-   uint func0 = open[global_addr];
-   uint func1 = !close[global_addr] || escape[global_addr] || open[global_addr];
+   uint func0 = open;
+   uint func1 = !close || escape[global_addr] || open;
    function[global_addr] = {func0, func1};
 
    parallelScan(function, Compose);

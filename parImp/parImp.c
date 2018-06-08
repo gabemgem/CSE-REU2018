@@ -134,7 +134,15 @@ int main() {
 
    /* Get data from file */
    read_from_file(input_string, input_length);
+
+   /*Shared memory for kernel*/
    uint* out_array = malloc(input_length*sizeof(uint));
+   uint* escape = malloc(input_length*sizeof(uint));
+   uint* open = malloc(input_length*sizeof(uint));
+   uint* close = malloc(input_length*sizeof(uint));
+   uint** function = malloc(input_length*sizeof(uint*));
+   uint* delimited = malloc(input_length*sizeof(uint));
+   uint* separator = malloc(input_length*sizeof(uint));
 
    /* Create device and context */
    device = create_device();
@@ -180,9 +188,13 @@ int main() {
    /* Create kernel arguments */
    /* Change according to your kernel */
    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(kernel, 1, local_size * sizeof(uint), NULL);
-   err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &output_buffer);
-   err |= clSetKernelArg(kernel, 3, sizeof(&specChars), &specChars)
+   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(kernel, 2, sizeof(&specChars), &specChars);
+   err |= clSetKernelArg(kernel, 3, sizeof(&input_length), &input_length);
+   err |= clSetKernelArg(kernel, 4, sizeof(&escape), &escape);
+   err |= clSetKernelArg(kernel, 5, sizeof(&function), &function);
+   err |= clSetKernelArg(kernel, 6, sizeof(&delimited), &delimited);
+   err |= clSetKernelArg(kernel, 7, sizeof(&separator), &separator);
    if(err < 0) {
       perror("Couldn't create a kernel argument");
       exit(1);
