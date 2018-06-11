@@ -69,9 +69,9 @@ __kernel void parScanCompose(
 	int k = get_num_groups(0);
 	//copy data into local memory
 	x[local_index0] = (index0 < n) ? data[index0] : 0;
-	x[local_index0+1] = (index0+1 < n) ? data[index0+1] : 0;
+	x[local_index0+1] = (index0+1 < n) ? data[index0+1] : 1;
 	x[local_index1] = (index1 < n) ? data[index1] : 0;
-	x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 0;
+	x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
 
 	//sweepup on each subarray
 	sweepup1(x, m);
