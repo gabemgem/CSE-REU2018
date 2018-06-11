@@ -21,12 +21,12 @@ __kernel void findSep(__global char* S,  __global uint* group_result,
    function[(global_addr*2)+1] = !close || 
                                  escape[global_addr-1] || open;
 
-   parallelScan(function, Compose);
+   parallelScanCompose(function);
 
    delimited[global_addr] = function[global_addr][delimited[0]];
    separator[global_addr] = (input==SEP) && !delimited[global_addr];
 
-   parallelScan(separator, +);
+   parallelScan(separator);
 
    if(separator[global_addr] != separator[global_addr+1]) {
       group_result[separator[global_addr]] = global_addr;
