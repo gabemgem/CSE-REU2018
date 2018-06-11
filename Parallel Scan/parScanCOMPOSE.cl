@@ -39,9 +39,9 @@ inline void sweepdown1(__local uint* x, int m) {
 }
 
 inline uint2 compose(uint f0, uint f1, uint g0, uint g1) {
-	uint* f = {f0, f1};
-	uint* g = {g0, g1};
-	uint* h = {0, 0};
+	uint[] f = {f0, f1};
+	uint[] g = {g0, g1};
+	uint[] h = {0, 0};
 	h[0] = g[f[0]];
 	h[1] = g[f[1]];
 	return (uint2)(h[0], h[1]);
@@ -73,6 +73,9 @@ __kernel void parScanCompose(
 	x[local_index1] = (index1 < n) ? data[index1] : 0;
 	x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
 
+	uint4 initial_data = (uint4)(x[local_index0], x[local_index0+1], 
+								x[local_index1], x[local_index1+1]);
+
 	//sweepup on each subarray
 	sweepup1(x, m);
 	//last workitem puts the identity into the end of the array
@@ -85,7 +88,14 @@ __kernel void parScanCompose(
 	//sweepdown on each subarray
 	sweepdown1(x,m);
 
-
+	uint2 h1 = compose(x[local_index0], x[local_index0+1], 
+					   initial_data.x, initial_data.y);
+	uint2 h2 = compose(x[local_index1], x[local_index1+1],
+					   initial_data.z, initial_data.w);
+	x[local_index0] = h1.x;
+	x[local_index0+1] = h1.y;
+	x[local_index1] = h2.x;
+	x[local_index1+1] = h2.y;
 	//copy back to global data
 	if(index0 < n) {
 		data[index0] = x[local_index0];

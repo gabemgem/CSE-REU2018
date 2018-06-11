@@ -194,7 +194,7 @@ int main() {
    err |= clSetKernelArg(kernel, 2, specChars_length, &specChars);
    err |= clSetKernelArg(kernel, 3, sizeof(cl_int), input_length);
    err |= clSetKernelArg(kernel, 4, (*input_length) * sizeof(cl_uint), &escape);
-   err |= clSetKernelArg(kernel, 5, sizeof(&function), &function);                  //not actual size
+   err |= clSetKernelArg(kernel, 5, (*input_length) * sizeof(cl_uint) * 2, &function);
    err |= clSetKernelArg(kernel, 6, (*input_length) * sizeof(cl_uint), &delimited);
    err |= clSetKernelArg(kernel, 7, (*input_length) * sizeof(cl_uint), &separator);
    if(err != CL_SUCCESS) {
