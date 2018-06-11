@@ -1,6 +1,6 @@
 #define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
-#define KERNEL_FUNC "findSep"
+#define KERNEL_FUNC "calcFunc"
 //#define INPUT_SIZE 64//Use if input size is already known
 
 #include <math.h>
@@ -119,7 +119,10 @@ int main() {
    cl_device_id device;
    cl_context context;
    cl_program program;
-   cl_kernel kernel;
+   cl_kernel calculateFunction;
+   cl_kernel parScanFunction;
+   cl_kernel parScanFunctionWithSubarrays;
+   cl_kernel calculateDelimited;
    cl_command_queue queue;
    cl_int i, j, err;
    size_t local_size, global_size;
@@ -130,7 +133,7 @@ int main() {
    char* specChars = ",[]\\";
    size_t specChars_length = strlen(specChars);
 
-   cl_mem input_buffer, output_buffer;
+   cl_mem input_buffer, function_buffer;
    cl_int num_groups;
 
    /* Get data from file */
@@ -138,11 +141,11 @@ int main() {
    read_from_file(input_string, input_length);
 
    /*Shared memory for kernel*/
-   cl_uint* out_array = malloc((*input_length) * sizeof(cl_uint));
+  
    cl_uint* escape = malloc((*input_length) * sizeof(cl_uint));
    cl_uint* open = malloc((*input_length) * sizeof(cl_uint));
    cl_uint* close = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint** function = malloc((*input_length) * sizeof(cl_uint*));
+   cl_uint* function = malloc((*input_length) * sizeof(cl_uint) * 2);
    cl_uint* delimited = malloc((*input_length) * sizeof(cl_uint));
    cl_uint* separator = malloc((*input_length) * sizeof(cl_uint));
 
@@ -166,8 +169,8 @@ int main() {
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(char), input_string, &err);
 
-   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(cl_uint), out_array, &err);
+   function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(cl_uint)*2, function, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a buffer");
       exit(1);   
@@ -181,7 +184,26 @@ int main() {
    };
 
    /* Create a kernel */
-   kernel = clCreateKernel(program, KERNEL_FUNC, &err);
+   calculateFunction = clCreateKernel(program, "calcFunc", &err);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel");
+      exit(1);
+   };
+
+   parScanFunction = clCreateKernel(program, "parScanCompose", &err);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel");
+      exit(1);
+   };
+
+   parScanFunctionWithSubarrays = clCreateKernel(program, 
+                                  "parScanComposeWithSubarrays", &err);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel");
+      exit(1);
+   };
+
+   calculateDelimited = clCreateKernel(program, "calcDel", &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel");
       exit(1);
@@ -189,14 +211,11 @@ int main() {
 
    /* Create kernel arguments */
    /* Change according to your kernel */
-   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_buffer);
-   err |= clSetKernelArg(kernel, 2, specChars_length, &specChars);
-   err |= clSetKernelArg(kernel, 3, sizeof(cl_int), input_length);
-   err |= clSetKernelArg(kernel, 4, (*input_length) * sizeof(cl_uint), &escape);
-   err |= clSetKernelArg(kernel, 5, (*input_length) * sizeof(cl_uint) * 2, &function);
-   err |= clSetKernelArg(kernel, 6, (*input_length) * sizeof(cl_uint), &delimited);
-   err |= clSetKernelArg(kernel, 7, (*input_length) * sizeof(cl_uint), &separator);
+   err = clSetKernelArg(calculateFunction, 0, sizeof(cl_mem), &input_buffer);
+   err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
+   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), input_length);
+   err |= clSetKernelArg(calculateFunction, 3, (*input_length) * sizeof(cl_uint), &escape);
+   err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument");
       exit(1);
