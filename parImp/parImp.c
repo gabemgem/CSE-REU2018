@@ -248,6 +248,7 @@ int main() {
    free(function);
    free(delimited);
    free(separator);
+   free(specChars);
    clReleaseKernel(kernel);
    clReleaseMemObject(output_buffer);
    clReleaseMemObject(input_buffer);
