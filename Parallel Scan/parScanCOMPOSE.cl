@@ -172,20 +172,21 @@ __kernel void parScanComposeFromSubarrays(
 
 	//copy data into local memory
 	x[local_index0] = (index0 < n) ? data[index0] : 0;
-	x[local_index0+1] = (index0+1 < n) ? data[index0+1] : 0;
+	x[local_index0+1] = (index0+1 < n) ? data[index0+1] : 1;
 	x[local_index1] = (index1 < n) ? data[index1] : 0;
-	x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 0;
+	x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
 
-	uint2 h1 = (grpid > 0) ? compose(part[index0], part[index1], 
+	uint2 h1 = (grpid > 0) ? compose(part[grpid-2], part[grpid-1], 
 		x[local_index0], x[local_index0+1]) : 
 		(uint2)(x[local_index0], x[local_index0+1]);
 	x[local_index0] = h1.x;
 	x[local_index0+1] = h1.y;
-	uint2 h2 = (grpid > 0) ? compose(part[index0], part[index1], 
+
+	uint2 h2 = (grpid > 0) ? compose(part[grpid-2], part[grpid-1], 
 		x[local_index1], x[local_index1+1]) : 
 		(uint2)(x[local_index1], x[local_index1+1]);
-	x[local_index0] = h2.x;
-	x[local_index0+1] = h2.y;
+	x[local_index1] = h2.x;
+	x[local_index1+1] = h2.y;
 
 	//copy back to global data
 	if(index0 < n) {
