@@ -176,15 +176,13 @@ __kernel void parScanComposeFromSubarrays(
 	x[local_index1] = (index1 < n) ? data[index1] : 0;
 	x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
 
-	uint2 h1 = (grpid > 0) ? compose(part[grpid-2], part[grpid-1], 
-		x[local_index0], x[local_index0+1]) : 
-		(uint2)(x[local_index0], x[local_index0+1]);
+	uint2 h1 = compose(part[grpid], part[grpid+1], 
+		x[local_index0], x[local_index0+1]);
 	x[local_index0] = h1.x;
 	x[local_index0+1] = h1.y;
 
-	uint2 h2 = (grpid > 0) ? compose(part[grpid-2], part[grpid-1], 
-		x[local_index1], x[local_index1+1]) : 
-		(uint2)(x[local_index1], x[local_index1+1]);
+	uint2 h2 = compose(part[grpid], part[grpid+1], 
+		x[local_index1], x[local_index1+1]);
 	x[local_index1] = h2.x;
 	x[local_index1+1] = h2.y;
 
