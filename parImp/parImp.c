@@ -98,13 +98,13 @@ void read_from_file(char* line, ssize_t* len) {
    line = NULL;
    size_t l = 0;
 
-   fp = fopen(INPUT_FILE);
+   fp = fopen(INPUT_FILE, 'r');
    if(!fp) {
       printf("Couldn't open input file");
       exit(1);
    }
 
-   if(*len = getline(&line, &l, fp) == -1) {
+   if((*len = getline(&line, &l, fp)) == -1) {
       printf("Couldn't read input file");
       exit(1);
    }
@@ -133,19 +133,22 @@ int main() {
    cl_int num_groups;
 
    /* Get data from file */
+   //call to get line requires free at end
    read_from_file(input_string, input_length);
 
    /*Shared memory for kernel*/
-   uint* out_array = malloc(input_length*sizeof(uint));
-   uint* escape = malloc(input_length*sizeof(uint));
-   uint* function = malloc(input_length*sizeof(uint)*2);
-   uint* delimited = malloc(input_length*sizeof(uint));
-   uint* separator = malloc(input_length*sizeof(uint));
+   cl_uint* out_array = malloc(input_length*sizeof(cl_uint));
+   cl_uint* escape = malloc(input_length*sizeof(cl_uint));
+   cl_uint* open = malloc(input_length*sizeof(cl_uint));
+   cl_uint* close = malloc(input_length*sizeof(cl_uint));
+   cl_uint** function = malloc(input_length*sizeof(cl_uint*));
+   cl_uint* delimited = malloc(input_length*sizeof(cl_uint));
+   cl_uint* separator = malloc(input_length*sizeof(cl_uint));
 
    /* Create device and context */
    device = create_device();
    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-   if(err < 0) {
+   if(err != CL_SUCCESS) {
       perror("Couldn't create a context");
       exit(1);   
    }
@@ -158,42 +161,42 @@ int main() {
    local_size = 8;//NUM THREADS per BLOCK
    num_groups = global_size/local_size;//NUM BLOCKS
    
-   /* CHANGE "sizeof" TO INPUT DATA TYPE */
+   /* Create buffer for input string */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
    
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(uint), out_array, &err);
-   if(err < 0) {
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), out_array, &err);
+   if(err != CL_SUCCESS) {
       perror("Couldn't create a buffer");
       exit(1);   
    };
 
    /* Create a command queue */
    queue = clCreateCommandQueue(context, device, 0, &err);
-   if(err < 0) {
+   if(err != CL_SUCCESS) {
       perror("Couldn't create a command queue");
       exit(1);   
    };
 
    /* Create a kernel */
    kernel = clCreateKernel(program, KERNEL_FUNC, &err);
-   if(err < 0) {
+   if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel");
       exit(1);
    };
 
    /* Create kernel arguments */
    /* Change according to your kernel */
-   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_buffer);
-   err |= clSetKernelArg(kernel, 2, sizeof(&specChars), &specChars);
-   err |= clSetKernelArg(kernel, 3, sizeof(&input_length), &input_length);
-   err |= clSetKernelArg(kernel, 4, sizeof(&escape), &escape);
-   err |= clSetKernelArg(kernel, 5, sizeof(&function), &function);
-   err |= clSetKernelArg(kernel, 6, sizeof(&delimited), &delimited);
-   err |= clSetKernelArg(kernel, 7, sizeof(&separator), &separator);
-   if(err < 0) {
+   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);            //not sure about this
+   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_buffer);          //or this
+   err |= clSetKernelArg(kernel, 2, sizeof(&specChars), &specChars);          //not actual size
+   err |= clSetKernelArg(kernel, 3, sizeof(&input_length), &input_length);    //"   "      "
+   err |= clSetKernelArg(kernel, 4, sizeof(&escape), &escape);                //"   "      "
+   err |= clSetKernelArg(kernel, 5, sizeof(&function), &function);            //"   "      "
+   err |= clSetKernelArg(kernel, 6, sizeof(&delimited), &delimited);          //"   "      "
+   err |= clSetKernelArg(kernel, 7, sizeof(&separator), &separator);          //"   "      "
+   if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument");
       exit(1);
    }
@@ -201,15 +204,18 @@ int main() {
    /* Enqueue kernel */
    err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-   if(err < 0) {
+   if(err != CL_SUCCESS) {
       perror("Couldn't enqueue the kernel");
       exit(1);
    }
+   
+   /* To ensure that parsing is done before reading the result (not sure if needed)*/
+   clFinish(queue);
 
    /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0, 
-         sizeof(sum), sum, 0, NULL, NULL);
-   if(err < 0) {
+   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,                //not sure about this
+         input_length*sizeof(cl_uint), out_array, 0, NULL, NULL);
+   if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
    }
