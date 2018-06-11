@@ -93,7 +93,7 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    return program;
 }
 
-void read_from_file(char* line, ssize_t* len) {
+void read_from_file(char* line, cl_int* len) {
    FILE *fp;
    line = NULL;
    size_t l = 0;
@@ -126,8 +126,9 @@ int main() {
 
    /* Data and buffers */
    char* input_string;
-   ssize_t* input_length;
+   cl_int* input_length;
    char* specChars = ",[]\\";
+   size_t specChars_length = strlen(specChars);
 
    cl_mem input_buffer, output_buffer;
    cl_int num_groups;
@@ -137,13 +138,13 @@ int main() {
    read_from_file(input_string, input_length);
 
    /*Shared memory for kernel*/
-   cl_uint* out_array = malloc(input_length*sizeof(cl_uint));
-   cl_uint* escape = malloc(input_length*sizeof(cl_uint));
-   cl_uint* open = malloc(input_length*sizeof(cl_uint));
-   cl_uint* close = malloc(input_length*sizeof(cl_uint));
-   cl_uint** function = malloc(input_length*sizeof(cl_uint*));
-   cl_uint* delimited = malloc(input_length*sizeof(cl_uint));
-   cl_uint* separator = malloc(input_length*sizeof(cl_uint));
+   cl_uint* out_array = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* escape = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* open = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* close = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint** function = malloc((*input_length) * sizeof(cl_uint*));
+   cl_uint* delimited = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* separator = malloc((*input_length) * sizeof(cl_uint));
 
    /* Create device and context */
    device = create_device();
@@ -163,10 +164,10 @@ int main() {
    
    /* Create buffer for input string */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
-   
+         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(char), input_string, &err);
+
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), out_array, &err);
+         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(cl_uint), out_array, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a buffer");
       exit(1);   
@@ -188,14 +189,14 @@ int main() {
 
    /* Create kernel arguments */
    /* Change according to your kernel */
-   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);            //not sure about this
-   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_buffer);          //or this
-   err |= clSetKernelArg(kernel, 2, sizeof(&specChars), &specChars);          //not actual size
-   err |= clSetKernelArg(kernel, 3, sizeof(&input_length), &input_length);    //"   "      "
-   err |= clSetKernelArg(kernel, 4, sizeof(&escape), &escape);                //"   "      "
-   err |= clSetKernelArg(kernel, 5, sizeof(&function), &function);            //"   "      "
-   err |= clSetKernelArg(kernel, 6, sizeof(&delimited), &delimited);          //"   "      "
-   err |= clSetKernelArg(kernel, 7, sizeof(&separator), &separator);          //"   "      "
+   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
+   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(kernel, 2, specChars_length, &specChars);
+   err |= clSetKernelArg(kernel, 3, sizeof(cl_int), input_length);
+   err |= clSetKernelArg(kernel, 4, (*input_length) * sizeof(cl_uint), &escape);
+   err |= clSetKernelArg(kernel, 5, sizeof(&function), &function);                  //not actual size
+   err |= clSetKernelArg(kernel, 6, (*input_length) * sizeof(cl_uint), &delimited);
+   err |= clSetKernelArg(kernel, 7, (*input_length) * sizeof(cl_uint), &separator);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument");
       exit(1);
@@ -213,25 +214,12 @@ int main() {
    clFinish(queue);
 
    /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,                //not sure about this
-         input_length*sizeof(cl_uint), out_array, 0, NULL, NULL);
+   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
+         (*input_length) * sizeof(cl_uint), out_array, 0, NULL, NULL);
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
    }
-
-   /* Check result if using testing data*/
-   /*total = 0.0f;
-   for(j=0; j<num_groups; j++) {
-      total += sum[j];
-   }
-   actual_sum = 1.0f * INPUT_SIZE/2*(INPUT_SIZE-1);
-   printf("Computed sum = %.1f.\n", total);
-   if(fabs(total - actual_sum) > 0.01*fabs(actual_sum))
-      printf("Check failed.\n");
-   else
-      printf("Check passed.\n");
-	*/
    
    /* Deallocate resources */
    free(input_string);
