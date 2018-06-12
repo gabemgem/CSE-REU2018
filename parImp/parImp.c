@@ -98,7 +98,7 @@ void read_from_file(char* line, cl_int* len) {
    line = NULL;
    size_t l = 0;
 
-   fp = fopen(INPUT_FILE, 'r');
+   fp = fopen(INPUT_FILE, "r");
    if(!fp) {
       printf("Couldn't open input file");
       exit(1);
@@ -127,7 +127,7 @@ void pad_string(char** str, cl_int* len){
    *str = (char *)realloc(*str, sizeof(char) * new_len);
    
    for(cl_int i=(*len); i<new_len; ++i){
-         str[i] = ' ';
+         (*str)[i] = ' ';
    }
    *len = new_len;
 }
@@ -148,7 +148,7 @@ int main() {
 
    /* Data and buffers */
    char* input_string;
-   cl_int* input_length;
+   cl_int input_length;
    char* specChars = ",[]\\";
    size_t specChars_length = strlen(specChars);
 
@@ -157,10 +157,10 @@ int main() {
 
    /* Get data from file */
    //call to get line requires free at end
-   read_from_file(input_string, input_length);
+   read_from_file(input_string, &input_length);
    
    //pads string to length of next power of 2 with spaces
-   pad_string(input_string, input_length);
+   pad_string(&input_string, &input_length);
 
    /* Create device and context */
    device = create_device();
@@ -179,21 +179,21 @@ int main() {
    num_groups = global_size/local_size;//NUM BLOCKS
    
    /* Shared memory for kernel */
-   cl_uint* escape = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* open = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* close = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* function = malloc((*input_length) * sizeof(cl_uint) * 2);
-   cl_uint* delimited = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* separator = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* escape = malloc(input_length * sizeof(cl_uint));
+   cl_uint* open = malloc(input_length * sizeof(cl_uint));
+   cl_uint* close = malloc(input_length * sizeof(cl_uint));
+   cl_uint* function = malloc(input_length * sizeof(cl_uint) * 2);
+   cl_uint* delimited = malloc(input_length * sizeof(cl_uint));
+   cl_uint* separator = malloc(input_length * sizeof(cl_uint));
    cl_uint* local_array;
    cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
 
    /* Create buffer for input string */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(char), input_string, &err);
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(cl_uint)*2, function, &err);
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint)*2, function, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
@@ -237,8 +237,8 @@ int main() {
    /* Create kernel arguments */
    err = clSetKernelArg(calculateFunction, 0, sizeof(cl_mem), &input_buffer);
    err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
-   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), *input_length);
-   err |= clSetKernelArg(calculateFunction, 3, (*input_length) * sizeof(cl_uint), &escape);
+   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), &input_length);
+   err |= clSetKernelArg(calculateFunction, 3, input_length * sizeof(cl_uint), &escape);
    err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for calcFun");
@@ -294,7 +294,7 @@ int main() {
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
-         (*input_length) * sizeof(cl_uint), function, 0, NULL, NULL);
+         input_length * sizeof(cl_uint), function, 0, NULL, NULL);
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
