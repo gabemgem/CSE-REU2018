@@ -291,9 +291,6 @@ int main() {
       perror("Couldn't enqueue the calcDel");
       exit(1);
    }
-   
-   /* To ensure that parsing is done before reading the result (not sure if needed)*/
-   clFinish(queue);
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
