@@ -113,6 +113,25 @@ void read_from_file(char* line, cl_int* len) {
 
 }
 
+/* Padding string w/ spaces to a length of next power of 2.
+   Stores padded string and new length in parameters.
+*/
+void pad_string(char** str, cl_int* len){ 
+   //probably a faster implementation
+   cl_int new_len = 1;
+
+   while(*len > new_len){
+      new_len <<= 1;
+   }
+
+   *str = (char *)realloc(*str, sizeof(char) * new_len);
+   
+   for(cl_int i=(*len); i<new_len; ++i){
+         str[i] = ' ';
+   }
+   *len = new_len;
+}
+
 int main() {
 
    /* OpenCL structures */
@@ -139,6 +158,9 @@ int main() {
    /* Get data from file */
    //call to get line requires free at end
    read_from_file(input_string, input_length);
+   
+   //pads string to length of next power of 2 with spaces
+   pad_string(input_string, input_length);
 
    /*Shared memory for kernel*/
   
