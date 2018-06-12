@@ -43,7 +43,7 @@ inline void inclusive_step(__global uint* x, uint size){
     }
 }
 
-__kernel void parScanCompose(__global uint* func, uint size) {
+__kernel void parScanComposeInclusive(__global uint* func, uint size) {
     
     //wrote code in other functions for easier writing
 
