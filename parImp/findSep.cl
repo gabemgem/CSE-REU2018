@@ -60,7 +60,7 @@ inline void sweepdown1(__local uint* x, int m) {
 __kernel void parScanCompose(
    __global    uint* data, //length n
    __local  uint* x, //length m
-   __global    uint* part, //length m
+   __global    uint* part, //length k
             uint n) {
 
    int wx = get_local_size(0);
@@ -148,47 +148,58 @@ inline void sweepup2(__global uint* x, int k) {
 //only uses global memory
 inline void sweepdown2(__global uint* x, int k) {
    int gid = get_global_id(0);
-   if(gid<k/2) {
-      int ind1 = (gid*4)+2;
+   if(gid<k/2) {//only use work items with relevant data
+      int ind1 = (gid*4)+2;//g function location
       int depth = log2(k/2);
       for(int d=depth-1; d>-1; --d) {
-         barrier(CLK_GLOBAL_MEM_FENCE);
+         barrier(CLK_GLOBAL_MEM_FENCE);//sync all work items
          int mask = (0x1 << d) - 1;
-         if((gid & mask) == mask) {
+         if((gid & mask) == mask) {//mask out unused work items
             int offset = (0x1 << d)*2;
-            int ind0 = ind1 - offset;
-            int temp0 = x[ind1];
+            int ind0 = ind1 - offset;//f function location
+            int temp0 = x[ind1];//store g function
             int temp1 = x[ind1+1];
             uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1]+1)
-            x[ind1] = h.x;
+            x[ind1] = h.x;//place composed function into g location
             x[ind1+1] = h.y;
-            x[ind0] = temp0;
+            x[ind0] = temp0;//place g function into f location
             x[ind0+1] = temp1;
          }
       }
    }
 }
 
+//kernel to parallel scan partial results of initial scan
+//produces final outputs of a parallel scan COMPOSE
+/*
+   data : function array partially scanned
+   x : local array for computations
+   part : array of partial results from first scan
+   n : length of data
+*/
 __kernel void parScanComposeFromSubarrays(
    __global    uint* data, //length n
    __local  uint* x,    //length m
-   __global    uint* part, //length m
+   __global    uint* part, //length k
             uint n) {
+
+   //global identifiers
    int gid = get_global_id(0);
    int index0 = (gid*4);
    int index1 = (gid*4)+2;
 
-   
    //list lengths
    int m = wx*4;
    int k = get_num_groups(0);
 
-   
+   //sweepup on partial results   
    sweepup2(part, k);
-   if(gid==k-1) {
+   //last work item puts the identity into the end of the array
+   if(gid==(k/2)-1) {
       part[index1] = 0;
       part[index1+1] = 1;
    }
+   //sweepdown on partial results
    sweepdown2(part, k);
    
 
