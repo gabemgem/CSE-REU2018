@@ -215,6 +215,7 @@ __kernel void parScanComposeFromSubarrays(
    x[local_index1] = (index1 < n) ? data[index1] : 0;
    x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
 
+   //compose current data with result from previous group
    uint2 h1 = compose(part[grpid], part[grpid+1], 
       x[local_index0], x[local_index0+1]);
    x[local_index0] = h1.x;
