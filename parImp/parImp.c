@@ -1,6 +1,6 @@
 #define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
-#define KERNEL_FUNC "calcFunc"
+#define NUM_QUEUES 4
 //#define INPUT_SIZE 64//Use if input size is already known
 
 #include <math.h>
@@ -123,7 +123,7 @@ int main() {
    cl_kernel parScanFunction;
    cl_kernel parScanFunctionWithSubarrays;
    cl_kernel calculateDelimited;
-   cl_command_queue queue;
+   static cl_command_queue queue[NUM_QUEUES];
    cl_int i, j, err;
    size_t local_size, global_size;
 
@@ -176,12 +176,14 @@ int main() {
       exit(1);   
    };
 
-   /* Create a command queue */
-   queue = clCreateCommandQueue(context, device, 0, &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a command queue");
-      exit(1);   
-   };
+   /* Create a command queues */
+   for(i=0; i<NUM_QUEUES; ++i) {
+      queue[i] = clCreateCommandQueue(context, device, 0, &err);
+      if(err != CL_SUCCESS) {
+         perror("Couldn't create a command queue");
+         exit(1);   
+      };
+   }
 
    /* Create a kernel */
    calculateFunction = clCreateKernel(program, "calcFunc", &err);
@@ -222,10 +224,31 @@ int main() {
    }
 
    /* Enqueue kernel */
-   err = clEnqueueNDRangeKernel(queue, calculateFunction, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue[0], calculateFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the kernel");
+      perror("Couldn't enqueue the calcFunc");
+      exit(1);
+   }
+
+   err = clEnqueueNDRangeKernel(queue[1], parScanFunction, 1, NULL, &global_size, 
+         &local_size, 0, NULL, NULL); 
+   if(err != CL_SUCCESS) {
+      perror("Couldn't enqueue the parScan");
+      exit(1);
+   }
+
+   err = clEnqueueNDRangeKernel(queue[2], parScanFunctionWithSubarrays, 1, NULL, &global_size, 
+         &local_size, 0, NULL, NULL); 
+   if(err != CL_SUCCESS) {
+      perror("Couldn't enqueue the parScanWithSubarrays");
+      exit(1);
+   }
+
+   err = clEnqueueNDRangeKernel(queue[3], calculateDelimited, 1, NULL, &global_size, 
+         &local_size, 0, NULL, NULL); 
+   if(err != CL_SUCCESS) {
+      perror("Couldn't enqueue the calcDel");
       exit(1);
    }
    
