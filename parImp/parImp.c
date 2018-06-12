@@ -98,7 +98,7 @@ void read_from_file(char* line, cl_int* len) {
    line = NULL;
    size_t l = 0;
 
-   fp = fopen(INPUT_FILE, 'r');
+   fp = fopen(INPUT_FILE, "r");
    if(!fp) {
       printf("Couldn't open input file");
       exit(1);
@@ -111,6 +111,25 @@ void read_from_file(char* line, cl_int* len) {
 
    fclose(fp);
 
+}
+
+/* Padding string w/ spaces to a length of next power of 2.
+   Stores padded string and new length in parameters.
+*/
+void pad_string(char** str, cl_int* len){ 
+   //probably a faster implementation
+   cl_int new_len = 1;
+
+   while(*len > new_len){
+      new_len <<= 1;
+   }
+
+   *str = (char *)realloc(*str, sizeof(char) * new_len);
+   
+   for(cl_int i=(*len); i<new_len; ++i){
+         (*str)[i] = ' ';
+   }
+   *len = new_len;
 }
 
 int main() {
@@ -129,7 +148,7 @@ int main() {
 
    /* Data and buffers */
    char* input_string;
-   cl_int* input_length;
+   cl_int input_length;
    char* specChars = ",[]\\";
    size_t specChars_length = strlen(specChars);
 
@@ -138,7 +157,10 @@ int main() {
 
    /* Get data from file */
    //call to get line requires free at end
-   read_from_file(input_string, input_length);
+   read_from_file(input_string, &input_length);
+   
+   //pads string to length of next power of 2 with spaces
+   pad_string(&input_string, &input_length);
 
    /* Create device and context */
    device = create_device();
@@ -157,23 +179,23 @@ int main() {
    num_groups = global_size/local_size;//NUM BLOCKS
    
    /* Shared memory for kernel */
-   cl_uint* escape = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* open = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* close = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* function = malloc((*input_length) * sizeof(cl_uint) * 2);
-   cl_uint* delimited = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* separator = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* escape = malloc(input_length * sizeof(cl_uint));
+   cl_uint* open = malloc(input_length * sizeof(cl_uint));
+   cl_uint* close = malloc(input_length * sizeof(cl_uint));
+   cl_uint* function = malloc(input_length * sizeof(cl_uint) * 2);
+   cl_uint* delimited = malloc(input_length * sizeof(cl_uint));
+   cl_uint* separator = malloc(input_length * sizeof(cl_uint));
    cl_uint* local_array;
    cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
 
    /* Create buffer for input string */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(char), input_string, &err);
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(cl_uint)*2, function, &err);
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint)*2, function, &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a buffer");
+      perror("Couldn't create input and output buffers");
       exit(1);   
    };
 
@@ -186,37 +208,37 @@ int main() {
       };
    }
 
-   /* Create a kernel */
+   /* Creating kernels */
    calculateFunction = clCreateKernel(program, "calcFunc", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create calcFunc kernel");
       exit(1);
    };
 
    parScanFunction = clCreateKernel(program, "parScanCompose", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create parScanCompose kernel");
       exit(1);
    };
 
    parScanFunctionWithSubarrays = clCreateKernel(program, 
                                   "parScanComposeWithSubarrays", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create parScanComposeWithSubarrays kernel");
       exit(1);
    };
 
    calculateDelimited = clCreateKernel(program, "calcDel", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create calcDel kernel");
       exit(1);
    };
 
    /* Create kernel arguments */
    err = clSetKernelArg(calculateFunction, 0, sizeof(cl_mem), &input_buffer);
    err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
-   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), *input_length);
-   err |= clSetKernelArg(calculateFunction, 3, (*input_length) * sizeof(cl_uint), &escape);
+   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), &input_length);
+   err |= clSetKernelArg(calculateFunction, 3, input_length * sizeof(cl_uint), &escape);
    err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for calcFun");
@@ -269,13 +291,23 @@ int main() {
       perror("Couldn't enqueue the calcDel");
       exit(1);
    }
+<<<<<<< HEAD
    
    /* To ensure that parsing is done before reading the result (not sure if needed)*/
-   clFinish(queue);
+   clFinish(queue[0]);
+   clFinish(queue[1]);
+   clFinish(queue[2]);
+   clFinish(queue[3]);
+
+   /* Read the kernel's output */
+   err = clEnqueueReadBuffer(queue[0], function_buffer, CL_TRUE, 0,
+         (*input_length) * sizeof(cl_uint), function, 0, NULL, NULL);
+=======
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
-         (*input_length) * sizeof(cl_uint), function, 0, NULL, NULL);
+         input_length * sizeof(cl_uint), function, 0, NULL, NULL);
+>>>>>>> 1e8d2aa7c3033d3941ad2db0f17ed6d4318e5bde
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
@@ -284,15 +316,20 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
-   free(out_array);
    free(escape);
    free(function);
    free(delimited);
    free(separator);
    free(specChars);
-   clReleaseKernel(kernel);
-   clReleaseMemObject(output_buffer);
+
+   clReleaseKernel(calculateFunction);
+   clReleaseKernel(parScanFunction);
+   clReleaseKernel(parScanFunctionWithSubarrays);
+   clReleaseKernel(calculateDelimited);
+
+   clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
+
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseContext(context);
