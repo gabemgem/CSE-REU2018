@@ -140,15 +140,6 @@ int main() {
    //call to get line requires free at end
    read_from_file(input_string, input_length);
 
-   /*Shared memory for kernel*/
-  
-   cl_uint* escape = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* open = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* close = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* function = malloc((*input_length) * sizeof(cl_uint) * 2);
-   cl_uint* delimited = malloc((*input_length) * sizeof(cl_uint));
-   cl_uint* separator = malloc((*input_length) * sizeof(cl_uint));
-
    /* Create device and context */
    device = create_device();
    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
@@ -160,11 +151,21 @@ int main() {
    /* Build program */
    program = build_program(context, device, PROGRAM_FILE);
 
-   /* Create data buffer */
+   /* Create work group size */
    global_size = 128;//Total NUM THREADS
    local_size = 8;//NUM THREADS per BLOCK
    num_groups = global_size/local_size;//NUM BLOCKS
    
+   /* Shared memory for kernel */
+   cl_uint* escape = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* open = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* close = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* function = malloc((*input_length) * sizeof(cl_uint) * 2);
+   cl_uint* delimited = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* separator = malloc((*input_length) * sizeof(cl_uint));
+   cl_uint* local_array;
+   cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
+
    /* Create buffer for input string */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(char), input_string, &err);
@@ -212,14 +213,31 @@ int main() {
    };
 
    /* Create kernel arguments */
-   /* Change according to your kernel */
    err = clSetKernelArg(calculateFunction, 0, sizeof(cl_mem), &input_buffer);
    err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
-   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), input_length);
+   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), *input_length);
    err |= clSetKernelArg(calculateFunction, 3, (*input_length) * sizeof(cl_uint), &escape);
    err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument");
+      perror("Couldn't create a kernel argument for calcFun");
+      exit(1);
+   }
+
+   err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function);
+   err |= clSetKernelArg(parScanFunction, 1, NULL, &local_array);
+   err |= clSetKernelArg(parScanFunction, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
+   err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), *input_length);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for parScan");
+      exit(1);
+   }
+
+   err = clSetKernelArg(parScanFunctionWithSubarrays, 0, sizeof(cl_mem), &function);
+   err |= clSetKernelArg(parScanFunctionWithSubarrays, 1, NULL, &local_array);
+   err |= clSetKernelArg(parScanFunctionWithSubarrays, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
+   err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), *input_length);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for parScanWithSubarrays");
       exit(1);
    }
 
