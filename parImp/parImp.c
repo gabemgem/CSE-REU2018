@@ -222,7 +222,7 @@ int main() {
    }
 
    /* Enqueue kernel */
-   err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue, calculateFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
       perror("Couldn't enqueue the kernel");
@@ -233,8 +233,8 @@ int main() {
    clFinish(queue);
 
    /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
-         (*input_length) * sizeof(cl_uint), out_array, 0, NULL, NULL);
+   err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
+         (*input_length) * sizeof(cl_uint), function, 0, NULL, NULL);
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
