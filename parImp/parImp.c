@@ -195,7 +195,7 @@ int main() {
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
          CL_MEM_COPY_HOST_PTR, (*input_length) * sizeof(cl_uint)*2, function, &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a buffer");
+      perror("Couldn't create input and output buffers");
       exit(1);   
    };
 
@@ -211,26 +211,26 @@ int main() {
    /* Creating kernels */
    calculateFunction = clCreateKernel(program, "calcFunc", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create calcFunc kernel");
       exit(1);
    };
 
    parScanFunction = clCreateKernel(program, "parScanCompose", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create parScanCompose kernel");
       exit(1);
    };
 
    parScanFunctionWithSubarrays = clCreateKernel(program, 
                                   "parScanComposeWithSubarrays", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create parScanComposeWithSubarrays kernel");
       exit(1);
    };
 
    calculateDelimited = clCreateKernel(program, "calcDel", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel");
+      perror("Couldn't create calcDel kernel");
       exit(1);
    };
 
@@ -303,18 +303,20 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
-   free(out_array);
    free(escape);
    free(function);
    free(delimited);
    free(separator);
    free(specChars);
+
    clReleaseKernel(calculateFunction);
    clReleaseKernel(parScanFunction);
    clReleaseKernel(parScanFunctionWithSubarrays);
    clReleaseKernel(calculateDelimited);
+
    clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
+
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseContext(context);
