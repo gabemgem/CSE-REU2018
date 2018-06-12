@@ -292,6 +292,7 @@ int main() {
       exit(1);
    }
 <<<<<<< HEAD
+<<<<<<< HEAD
    
    /* To ensure that parsing is done before reading the result (not sure if needed)*/
    clFinish(queue[0]);
@@ -302,6 +303,12 @@ int main() {
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue[0], function_buffer, CL_TRUE, 0,
          (*input_length) * sizeof(cl_uint), function, 0, NULL, NULL);
+=======
+
+   /* Read the kernel's output */
+   err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
+         input_length * sizeof(cl_uint), function, 0, NULL, NULL);
+>>>>>>> 1e8d2aa7c3033d3941ad2db0f17ed6d4318e5bde
 =======
 
    /* Read the kernel's output */
