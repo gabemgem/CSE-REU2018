@@ -208,7 +208,7 @@ int main() {
       };
    }
 
-   /* Create a kernel */
+   /* Creating kernels */
    calculateFunction = clCreateKernel(program, "calcFunc", &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel");
@@ -309,8 +309,11 @@ int main() {
    free(delimited);
    free(separator);
    free(specChars);
-   clReleaseKernel(kernel);
-   clReleaseMemObject(output_buffer);
+   clReleaseKernel(calculateFunction);
+   clReleaseKernel(parScanFunction);
+   clReleaseKernel(parScanFunctionWithSubarrays);
+   clReleaseKernel(calculateDelimited);
+   clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
