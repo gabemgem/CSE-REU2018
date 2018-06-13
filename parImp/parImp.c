@@ -181,7 +181,12 @@ int main() {
    cl_uint* escape = malloc(input_length * sizeof(cl_uint));
    cl_uint* open = malloc(input_length * sizeof(cl_uint));
    cl_uint* close = malloc(input_length * sizeof(cl_uint));
+<<<<<<< HEAD
    cl_uint* function = malloc(input_length * sizeof(cl_uint) * 2);
+=======
+   cl_char* function = malloc(input_length * sizeof(cl_char) * 2);
+   cl_uint* delimited = malloc(input_length * sizeof(cl_uint));
+>>>>>>> 1f50567ca1cb600049da8a7859944058271dc0f3
    cl_uint* separator = malloc(input_length * sizeof(cl_uint));
    cl_uint* local_array;
    cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
@@ -192,10 +197,14 @@ int main() {
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+<<<<<<< HEAD
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint)*2, function, &err);
 
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | 
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), finalResults, &err);
+=======
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_char), function, &err);
+>>>>>>> 1f50567ca1cb600049da8a7859944058271dc0f3
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
@@ -248,7 +257,7 @@ int main() {
    err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunction, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunction, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
-   err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), *input_length);
+   err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), input_length);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for parScan");
       exit(1);
@@ -257,7 +266,7 @@ int main() {
    err = clSetKernelArg(parScanFunctionWithSubarrays, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
-   err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), *input_length);
+   err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), input_length);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for parScanWithSubarrays");
       exit(1);
@@ -302,27 +311,14 @@ int main() {
       perror("Couldn't enqueue the calcDel");
       exit(1);
    }
-<<<<<<< HEAD
-<<<<<<< HEAD
-   
+
    /* To ensure that parsing is done before reading the result (not sure if needed)*/
    clFinish(queue);
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue[0], function_buffer, CL_TRUE, 0,
-         (*input_length) * sizeof(cl_uint), function, 0, NULL, NULL);
-=======
+         input_length * sizeof(cl_char), function, 0, NULL, NULL);
 
-   /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
-         input_length * sizeof(cl_uint), function, 0, NULL, NULL);
->>>>>>> 1e8d2aa7c3033d3941ad2db0f17ed6d4318e5bde
-=======
-
-   /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
-         input_length * sizeof(cl_uint), function, 0, NULL, NULL);
->>>>>>> 1e8d2aa7c3033d3941ad2db0f17ed6d4318e5bde
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
