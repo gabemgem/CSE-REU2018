@@ -143,19 +143,17 @@ int main() {
    cl_kernel findSeparators;
    cl_command_queue queue;
    cl_int i, j, err;
-   size_t local_size, global_size;
 
    /* Data and buffers */
    char* input_string;
    cl_int input_length;
-   char* specChars = ",[]\\";
-   size_t specChars_length = strlen(specChars);
+   char specChars[4] = ",[]\\";
+   size_t specChars_length = 4;
 
-   cl_mem input_buffer, function_buffer, output_buffer;
-   cl_int num_groups;
+   
+
 
    /* Get data from file */
-   //call to get line requires free at end
    read_from_file(input_string, &input_length);
    
    //pads string to length of next power of 2 with spaces
@@ -173,27 +171,33 @@ int main() {
    program = build_program(context, device, PROGRAM_FILE);
 
    /* Create work group size */
-   global_size = 128;//Total NUM THREADS
-   local_size = 8;//NUM THREADS per BLOCK
-   num_groups = global_size/local_size;//NUM BLOCKS
+   size_t global_size = 128;//Total NUM THREADS
+   size_t local_size = 8;//NUM THREADS per BLOCK
+   cl_int num_groups = global_size/local_size;//NUM BLOCKS
    
-   /* Shared memory for kernel */
+   /* Shared memory for calcFunc */
    cl_uint* escape = malloc(input_length * sizeof(cl_uint));
-   cl_uint* open = malloc(input_length * sizeof(cl_uint));
-   cl_uint* close = malloc(input_length * sizeof(cl_uint));
-   cl_char* function = malloc(input_length * sizeof(cl_char) * 2);
-   cl_uint* delimited = malloc(input_length * sizeof(cl_uint));
-   cl_uint* separator = malloc(input_length * sizeof(cl_uint));
+   /* Shared memory for parallel scan kernels */
    cl_uint* local_array;
    cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
+   /* Shared memory for findSep */
+   cl_uint* separator = malloc(input_length * sizeof(cl_uint));
    cl_uint firstCharacter;
    cl_uint* finalResults;
+   /* Shared memory for all */
+   cl_char* function = malloc(input_length * sizeof(cl_char) * 2);
+   
+   
    /* Create buffer for input string */
-   input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
+   cl_mem input_buffer, function_buffer, output_buffer;
+   cl_mem input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
-   function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+   cl_mem function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_char), function, &err);
+
+   cl_mem output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), finalResults, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
@@ -322,6 +326,9 @@ int main() {
    free(separator);
    free(specChars);
 
+   clReleaseDevice(device);
+
+
    clReleaseKernel(calculateFunction);
    clReleaseKernel(parScanFunction);
    clReleaseKernel(parScanFunctionWithSubarrays);
@@ -329,6 +336,7 @@ int main() {
 
    clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
+   clReleaseMemObject(output_buffer);
 
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
