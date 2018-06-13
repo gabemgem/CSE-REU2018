@@ -1,6 +1,5 @@
 #define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
-#define NUM_QUEUES 4
 //#define INPUT_SIZE 64//Use if input size is already known
 
 #include <math.h>
@@ -141,8 +140,8 @@ int main() {
    cl_kernel calculateFunction;
    cl_kernel parScanFunction;
    cl_kernel parScanFunctionWithSubarrays;
-   cl_kernel calculateDelimited;
-   static cl_command_queue queue[NUM_QUEUES];
+   cl_kernel findSeparators;
+   cl_command_queue queue;
    cl_int i, j, err;
    size_t local_size, global_size;
 
@@ -152,7 +151,7 @@ int main() {
    char* specChars = ",[]\\";
    size_t specChars_length = strlen(specChars);
 
-   cl_mem input_buffer, function_buffer;
+   cl_mem input_buffer, function_buffer, output_buffer;
    cl_int num_groups;
 
    /* Get data from file */
@@ -183,30 +182,31 @@ int main() {
    cl_uint* open = malloc(input_length * sizeof(cl_uint));
    cl_uint* close = malloc(input_length * sizeof(cl_uint));
    cl_uint* function = malloc(input_length * sizeof(cl_uint) * 2);
-   cl_uint* delimited = malloc(input_length * sizeof(cl_uint));
    cl_uint* separator = malloc(input_length * sizeof(cl_uint));
    cl_uint* local_array;
    cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
-
+   cl_uint firstCharacter;
+   cl_uint* finalResults;
    /* Create buffer for input string */
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint)*2, function, &err);
+
+   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), finalResults, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
    };
 
    /* Create a command queues */
-   for(i=0; i<NUM_QUEUES; ++i) {
-      queue[i] = clCreateCommandQueue(context, device, 0, &err);
-      if(err != CL_SUCCESS) {
-         perror("Couldn't create a command queue");
-         exit(1);   
-      };
-   }
+   queue = clCreateCommandQueue(context, device, 0, &err);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a command queue");
+      exit(1);   
+   };
 
    /* Creating kernels */
    calculateFunction = clCreateKernel(program, "calcFunc", &err);
@@ -228,7 +228,7 @@ int main() {
       exit(1);
    };
 
-   calculateDelimited = clCreateKernel(program, "calcDel", &err);
+   findSeparators = clCreateKernel(program, "findSep", &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create calcDel kernel");
       exit(1);
@@ -239,13 +239,13 @@ int main() {
    err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
    err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), &input_length);
    err |= clSetKernelArg(calculateFunction, 3, input_length * sizeof(cl_uint), &escape);
-   err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function);
+   err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for calcFun");
       exit(1);
    }
 
-   err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function);
+   err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunction, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunction, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
    err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), *input_length);
@@ -254,7 +254,7 @@ int main() {
       exit(1);
    }
 
-   err = clSetKernelArg(parScanFunctionWithSubarrays, 0, sizeof(cl_mem), &function);
+   err = clSetKernelArg(parScanFunctionWithSubarrays, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), *input_length);
@@ -263,29 +263,40 @@ int main() {
       exit(1);
    }
 
+   err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
+   err |= clSetKernelArg(findSeparators, 1, sizeof(cl_mem), &input_buffer);
+   err |= clSetKernelArg(findSeparators, 2, input_length*sizeof(uint), &separator);
+   err |= clSetKernelArg(findSeparators, 3, sizeof(char), &specChars[0]);
+   err |= clSetKernelArg(findSeparators, 3, sizeof(uint), &firstCharacter);
+   err |= clSetKernelArg(findSeparators, 3, sizeof(cl_mem), &output_buffer);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for parScanWithSubarrays");
+      exit(1);
+   }
+
    /* Enqueue kernel */
-   err = clEnqueueNDRangeKernel(queue[0], calculateFunction, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue, calculateFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
       perror("Couldn't enqueue the calcFunc");
       exit(1);
    }
 
-   err = clEnqueueNDRangeKernel(queue[1], parScanFunction, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue, parScanFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
       perror("Couldn't enqueue the parScan");
       exit(1);
    }
 
-   err = clEnqueueNDRangeKernel(queue[2], parScanFunctionWithSubarrays, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue, parScanFunctionWithSubarrays, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
       perror("Couldn't enqueue the parScanWithSubarrays");
       exit(1);
    }
 
-   err = clEnqueueNDRangeKernel(queue[3], calculateDelimited, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue, findSeparators, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
       perror("Couldn't enqueue the calcDel");
@@ -295,10 +306,7 @@ int main() {
 <<<<<<< HEAD
    
    /* To ensure that parsing is done before reading the result (not sure if needed)*/
-   clFinish(queue[0]);
-   clFinish(queue[1]);
-   clFinish(queue[2]);
-   clFinish(queue[3]);
+   clFinish(queue);
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue[0], function_buffer, CL_TRUE, 0,
@@ -332,7 +340,7 @@ int main() {
    clReleaseKernel(calculateFunction);
    clReleaseKernel(parScanFunction);
    clReleaseKernel(parScanFunctionWithSubarrays);
-   clReleaseKernel(calculateDelimited);
+   clReleaseKernel(findSeparators);
 
    clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
