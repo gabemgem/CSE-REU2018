@@ -1,31 +1,29 @@
 //function to compose 2-variable boolean functions
-//functions represented as two bits of a char
 //h = g(f)
-inline char compose(char f, char g) {
-   char[] __f = {f & 1, (f & 2) >> 1};
-   char[] __g = {g & 1, (g & 2) >> 1};
-   
-   char h = 0;
+inline uint2 compose(uint f0, uint f1, uint g0, uint g1) {
+   uint[] f = {f0, f1};
+   uint[] g = {g0, g1};
+   uint[] h = {0, 0};
+   h[0] = g[f[0]];
+   h[1] = g[f[1]];
+   return (uint2)(h[0], h[1]);
 
-   h |= g[f[0]];
-   h |= g[f[1]] << 1;
-
-   return h;
 }
 
 //sweepup stage of parallel scan
 inline void sweepup1(__local uint* x, int m) {
    int lid = get_local_id(0);
-   int ind1 = (lid*2)+1;//g function location
-   int depth = log2(m);
+   int ind1 = (lid*4)+2;//g function location
+   int depth = log2(m/2);
    for(int d=0; d<depth; ++d) {
       barrier(CLK_LOCAL_MEM_FENCE);//sync work items
       int mask = (0x1 << d) - 1;
       if((lid & mask) == mask) {//mask unused work items
-         int offset = 0x1 << d;
+         int offset = (0x1 << d)*2;
          int ind0 = ind1 - offset;//f function location
-         char h = compose(x[ind0], x[ind1]);
-         x[ind1] = h;//place composed function into g location
+         uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1]+1);
+         x[ind1] = h.x;//place composed function into g location
+         x[ind1+1] = h.y;
       }
    }
 }
@@ -33,18 +31,21 @@ inline void sweepup1(__local uint* x, int m) {
 //sweepdown stage of parallel scan
 inline void sweepdown1(__local uint* x, int m) {
    int lid = get_local_id(0);
-   int ind1 = (lid*2)+1;//g function location
-   int depth = log2(m);
+   int ind1 = (lid*4)+2;//g function location
+   int depth = log2(m/2);
    for(int d=depth-1; d>-1; --d) {
       barrier(CLK_LOCAL_MEM_FENCE);//sync work items
       int mask = (0x1 << d) - 1;
       if((lid & mask) == mask) {//mask unused work items
-         int offset = 0x1 << d;
+         int offset = (0x1 << d)*2;
          int ind0 = ind1 - offset;//f function location
-         char temp = x[ind1];//store g function
-         char h = compose(x[ind0], x[ind1]);
-         x[ind1] = h;
-         x[ind0] = temp;//place g into f location
+         int temp0 = x[ind1];//store g function
+         int temp1 = x[ind1+1];
+         uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1]+1)
+         x[ind1] = h.x;//place composed function into g location
+         x[ind1+1] = h.y;
+         x[ind0] = temp0;//place g into f location
+         x[ind0+1] = temp1;
       }
    }
 }
@@ -57,9 +58,9 @@ inline void sweepdown1(__local uint* x, int m) {
 */
 
 __kernel void parScanCompose(
-   __global    char* data, //length n
-   __local  char* x, //length m
-   __global    char* part, //length k
+   __global    uint* data, //length n
+   __local  uint* x, //length m
+   __global    uint* part, //length k
             uint n) {
 
    int wx = get_local_size(0);
@@ -126,16 +127,17 @@ __kernel void parScanCompose(
 inline void sweepup2(__global uint* x, int k) {
    int gid = get_global_id(0);
    if(gid<k/2) {//only use work items with relevant data
-      int ind1 = (gid*2)+1;//g function location
-      int depth = log2(k);
+      int ind1 = (gid*4)+2;//g function location
+      int depth = log2(k/2);
       for(int d=0; d<depth; ++d) {
          barrier(CLK_GLOBAL_MEM_FENCE);//sync all work items
          int mask = (0x1 << d) - 1;
          if((gid & mask) == mask) {//mask unused work items
-            int offset = 0x1 << d;
+            int offset = (0x1 << d)*2;
             int ind0 = ind1 - offset;//f function location
-            char h = compose(x[ind0], x[ind1]);
-            x[ind1] = h1;
+            uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1]+1);
+            x[ind1] = h.x;//save composed function into g location
+            x[ind1+1] = h.y;
          }
       }
    }
@@ -147,18 +149,21 @@ inline void sweepup2(__global uint* x, int k) {
 inline void sweepdown2(__global uint* x, int k) {
    int gid = get_global_id(0);
    if(gid<k/2) {//only use work items with relevant data
-      int ind1 = (gid*2)+1;//g function location
-      int depth = log2(k);
+      int ind1 = (gid*4)+2;//g function location
+      int depth = log2(k/2);
       for(int d=depth-1; d>-1; --d) {
          barrier(CLK_GLOBAL_MEM_FENCE);//sync all work items
          int mask = (0x1 << d) - 1;
          if((gid & mask) == mask) {//mask out unused work items
             int offset = (0x1 << d)*2;
             int ind0 = ind1 - offset;//f function location
-            char temp = x[ind1];//store g function
-            char h = compose(x[ind0], x[ind1])
-            x[ind1] = h;//place composed function into g location
-            x[ind0] = temp;//place g function into f location
+            int temp0 = x[ind1];//store g function
+            int temp1 = x[ind1+1];
+            uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1]+1)
+            x[ind1] = h.x;//place composed function into g location
+            x[ind1+1] = h.y;
+            x[ind0] = temp0;//place g function into f location
+            x[ind0+1] = temp1;
          }
       }
    }
@@ -234,21 +239,22 @@ __kernel void parScanComposeFromSubarrays(
 
 inline void scan(__global uint* x, uint size){
     uint gid = get_global_id(0);
-    uint ind1 = (gid*2)+1;
-    uint depth = log2(size);
+    uint ind1 = (gid*4)+2;
+    uint depth = log2(n/2); //every two indicies representing 1 entry
     for(uint d=0; d<depth; ++d){
         barrier(CLK_GLOBAL_MEM_FENCE);
         int mask = (0x1 << d) - 1;
 		if((gid & mask) == mask) {
-			uint offset = 0x1 << d;
+			uint offset = (0x1 << d)*2;
 			uint ind0 = ind1 - offset;
-			char h = compose(x[ind0], x[ind1]);
-			x[ind1] = h;
+			uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1]+1);
+			x[ind1] = h.x;
+			x[ind1+1] = h.y;
 		}
     }
 }
 
-inline void inclusive_step(__global char* x, uint size){
+inline void inclusive_step(__global uint* x, uint size){
     for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
         barrier(CLK_GLOBAL_MEM_FENCE);
         
@@ -256,16 +262,17 @@ inline void inclusive_step(__global char* x, uint size){
             stride = sub_size / 4;
         
         if((gid & mask) == mask){
-            uint ind0 = gid;
-            uint ind1 = gid + stride;
+            uint ind0 = gid * 2;
+            uint ind1 = (gid + stride) * 2;
 
-            char h = compose(x[ind0], x[ind1]);
-            x[ind1] = h;
+            uint2 h = compose(x[ind0], x[ind0+1], x[ind1], x[ind1+1]);
+            x[ind1] = h.x;
+            x[ind1+1] = h.y;
         }
     }
 }
 
-__kernel void parScanComposeInclusive(__global char* func, uint size) {
+__kernel void parScanComposeInclusive(__global uint* func, uint size) {
     //wrote code in other functions for easier writing
 
     //scan step
@@ -280,7 +287,7 @@ __kernel void parScanComposeInclusive(__global char* func, uint size) {
 
 __kernel void calcFunc(__global char* S,
        __global char* specChars, __global uint S_length, 
-       __global uint* escape, __global char* function) {
+       __global uint* escape, __global uint* function) {
 
    
    uint global_addr, local_addr;
@@ -294,24 +301,36 @@ __kernel void calcFunc(__global char* S,
    char open = (input==specChars[1]);
    char close = (input==specChars[2]);
    escape[global_addr] = (input==specChars[3]);
-   
-   function[index] = 0;
-   function[index] |= open;
-   function[index] |= (!close || escape[global_addr-1] || open) << 1;
+
+   function[index] = open;
+   function[(index)+1] = !close || 
+                         escape[global_addr-1] || open;
 
    parallelScanCompose(function);
 
-   if(global_addr == 0){
-      delimited[global_addr] = open;
-   }
-
-   delimited[global_addr] = (function[global_addr] & (delimited[0] + 1)) >> delimited[0];
+   delimited[global_addr] = function[global_addr][delimited[0]];
    separator[global_addr] = (input==SEP) && !delimited[global_addr];
 
    parallelScan(separator);
 
    if(separator[global_addr] != separator[global_addr+1]) {
       group_result[separator[global_addr]] = global_addr;
+   }
+
+}
+
+__kernel void findSep(__global uint* function, 
+      __global char* S, __global uint* separator, 
+      char SEP, uint firstCharacter, __global uint* final_results) {
+   uint gid = get_global_id(0);
+   uint functionIndex = gid*2;
+   separator[gid] = (S[gid] == SEP) && !(function[functionIndex+firstCharacter]);
+
+   uint parallelScanResult = work_group_scan_inclusive_add(separator[gid]);
+   separator[gid] = parallelScanResult;
+
+   if(((gid==0) && (S[gid]==SEP)) || (parallelScanResult!=separator[gid-1])) {
+      final_results[parallelScanResult-1] = gid;
    }
 
 }
