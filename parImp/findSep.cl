@@ -88,7 +88,7 @@ __kernel void parScanCompose(
    //save partial result from each work group
    if (lid == (wx-1)) {
       part[grpid] = x[local_index1];
-      x[local_index1] = 2;
+      x[local_index1] = 2;//10 i.e. 2 is the identity
    }
    //sweepdown on each subarray
    sweepdown1(x,m);
