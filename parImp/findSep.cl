@@ -58,9 +58,9 @@ inline void sweepdown1(__local uint* x, int m) {
 */
 
 __kernel void parScanCompose(
-   __global    char* data, //length n
-   __local  char* x, //length m
-   __global    char* part, //length k
+   __global char* data, //length n
+   __local  char* x,    //length m
+   __global char* part, //length k
             uint n) {
 
    int wx = get_local_size(0);
@@ -163,9 +163,9 @@ inline void sweepdown2(__global uint* x, int k) {
    n : length of data
 */
 __kernel void parScanComposeFromSubarrays(
-   __global    char* data, //length n
+   __global char* data, //length n
    __local  char* x,    //length m
-   __global    char* part, //length k
+   __global char* part, //length k
             uint n) {
 
    //global identifiers
@@ -191,7 +191,7 @@ __kernel void parScanComposeFromSubarrays(
    int lid = get_local_id(0);
    int local_index0 = (lid*2);
    int local_index1 = (lid*2)+1;
-   int grpid = get_group_id(0)*2;   //NOT SURE TO CHANGE THIS
+   int grpid = get_group_id(0);
 
    //copy data into local memory
    x[local_index0] = (index0 < n) ? data[index0] : 2;
