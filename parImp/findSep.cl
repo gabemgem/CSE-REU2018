@@ -315,3 +315,18 @@ __kernel void calcFunc(__global char* S,
    }
 
 }
+
+__kernel void findSep(__global uint* function, 
+      __global char* S, __global uint* separator, 
+      char SEP, uint firstCharacter, __global uint* final_results) {
+   uint gid = get_global_id(0);
+   separator[gid] = (S[gid] == SEP) && !(function[gid] & 1<<firstCharacter);
+
+   uint parallelScanResult = work_group_scan_inclusive_add(separator[gid]);
+   separator[gid] = parallelScanResult;
+
+   if(((gid==0) && (S[gid]==SEP)) || (parallelScanResult!=separator[gid-1])) {
+      final_results[parallelScanResult-1] = gid;
+   }
+
+}
