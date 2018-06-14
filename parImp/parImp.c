@@ -315,7 +315,7 @@ int main() {
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
-         input_length * sizeof(cl_uint), output, 0, NULL, NULL);
+         input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
 
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
@@ -326,7 +326,7 @@ int main() {
    free(input_string);
    free(input_length);
    free(local_array);
-   free(output);
+   free(finalResults);
 
    clReleaseDevice(device);
 
