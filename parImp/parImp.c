@@ -175,23 +175,17 @@ int main() {
    size_t local_size = 8;//NUM THREADS per BLOCK
    cl_int num_groups = global_size/local_size;//NUM BLOCKS
    
-   /* Shared memory for calcFunc */
-   cl_uint* escape = malloc(input_length * sizeof(cl_uint));
    /* Shared memory for parallel scan kernels */
    cl_uint* local_array;
-   cl_uint* partial_results = malloc((global_size/local_size) * sizeof(cl_uint));
    /* Shared memory for findSep */
-   cl_uint* separator = malloc(input_length * sizeof(cl_uint));
-   cl_uint firstCharacter;
+   cl_uint firstCharacter = (input_string[0] == specChars[0]);
    cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
-   /* Shared memory for all */
-   cl_char* function = malloc(input_length * sizeof(cl_char));
    
    
    /* Create buffers */
    cl_mem input_buffer, function_buffer, output_buffer;
    cl_mem escape_buffer, partial_buffer, separator_buffer;
-   
+
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
@@ -205,7 +199,7 @@ int main() {
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), escape, &err);
 
    partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), partial_results, &err);
+         CL_MEM_COPY_HOST_PTR, num_groups * sizeof(cl_uint), partial_results, &err);
 
    separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), separator, &err);
@@ -331,14 +325,10 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
-   free(escape);
-   free(function);
-   free(delimited);
-   free(separator);
+   free(local_array);
    free(output);
 
    clReleaseDevice(device);
-
 
    clReleaseKernel(calculateFunction);
    clReleaseKernel(parScanFunction);
@@ -348,6 +338,9 @@ int main() {
    clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
    clReleaseMemObject(output_buffer);
+   clReleaseMemObject(escape_buffer);
+   clReleaseMemObject(partial_buffer);
+   clReleaseMemObject(separator_buffer);
 
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
