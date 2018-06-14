@@ -3,13 +3,12 @@
 //h = g(f)
 //the identity is defined by the bits 0b10 (i.e. 2)
 inline char compose(char f, char g) {
-   char[] __f = {f & 1, (f & 2) >> 1};
-   char[] __g = {g & 1, (g & 2) >> 1};
    
    char h = 0;
-
-   h |= g[f[0]];
-   h |= g[f[1]] << 1;
+   //puts g(f(0)) into the first bit of h
+   h |= (g & (1 << (f & 1))) >> (f & 1);
+   //puts g(f(1)) into the second bit of h
+   h |= (g & 1 << ((f&2) >> 1)) << (1 - ((f & 2) >> 1));
 
    return h;
 }
