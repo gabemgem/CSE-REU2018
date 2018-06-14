@@ -1,6 +1,7 @@
 //function to compose 2-variable boolean functions
 //functions represented as two bits of a char
 //h = g(f)
+//the identity is defined by the bits 0b10 (i.e. 2)
 inline char compose(char f, char g) {
    char[] __f = {f & 1, (f & 2) >> 1};
    char[] __g = {g & 1, (g & 2) >> 1};
@@ -57,33 +58,30 @@ inline void sweepdown1(__local uint* x, int m) {
 */
 
 __kernel void parScanCompose(
-   __global    char* data, //length n
-   __local  char* x, //length m
-   __global    char* part, //length k
+   __global char* data, //length n
+   __local  char* x,    //length m
+   __global char* part, //length k
             uint n) {
 
    int wx = get_local_size(0);
    //global identifiers
    int gid = get_global_id(0);
-   int index0 = (gid*4);
-   int index1 = (gid*4)+2;
+   int index0 = (gid*2);
+   int index1 = (gid*2)+1;
    //local identifiers
    int lid = get_local_id(0);
-   int local_index0 = (lid*4);
-   int local_index1 = (lid*4)+2;
-   int grpid = get_group_id(0)*2;
+   int local_index0 = (lid*2);
+   int local_index1 = (lid*2)+1;
+   int grpid = get_group_id(0);
    //list lengths
-   int m = wx*4;
+   int m = wx*2;
    int k = get_num_groups(0);
    //copy data into local memory
    //pad local data to make local array powers of two
-   x[local_index0] = (index0 < n) ? data[index0] : 0;
-   x[local_index0+1] = (index0+1 < n) ? data[index0+1] : 1;
-   x[local_index1] = (index1 < n) ? data[index1] : 0;
-   x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
+   x[local_index0] = (index0 < n) ? data[index0] : 2;
+   x[local_index1] = (index1 < n) ? data[index1] : 2;
    //store initial data to make scan inclusive
-   uint4 initial_data = (uint4)(x[local_index0], x[local_index0+1], 
-                        x[local_index1], x[local_index1+1]);
+   char2 initial_data = (char2)(x[local_index0], x[local_index1]);
 
    //sweepup on each subarray
    sweepup1(x, m);
@@ -91,31 +89,23 @@ __kernel void parScanCompose(
    //save partial result from each work group
    if (lid == (wx-1)) {
       part[grpid] = x[local_index1];
-      part[grpid+1] = x[local_index1+1];
-      x[local_index1] = 0;
-      x[local_index1+1] = 1;
+      x[local_index1] = 2;
    }
    //sweepdown on each subarray
    sweepdown1(x,m);
 
    //compose intial data with calculated data
-   uint2 h1 = compose(x[local_index0], x[local_index0+1], 
-                  initial_data.x, initial_data.y);
-   uint2 h2 = compose(x[local_index1], x[local_index1+1],
-                  initial_data.z, initial_data.w);
+   char h1 = compose(x[local_index0], initial_data.x);
+   char h2 = compose(x[local_index1], initial_data.y);
    //save into local memory
-   x[local_index0] = h1.x;
-   x[local_index0+1] = h1.y;
-   x[local_index1] = h2.x;
-   x[local_index1+1] = h2.y;
+   x[local_index0] = h1;
+   x[local_index1] = h2;
    //copy back to global data
    if(index0 < n) {
       data[index0] = x[local_index0];
-      data[index0+1] = x[local_index0+1];
    }
    if(index1 < n) {
       data[index1] = x[local_index1];
-      data[index1+1] = x[local_index1+1];
    }
 
 }
@@ -173,26 +163,25 @@ inline void sweepdown2(__global uint* x, int k) {
    n : length of data
 */
 __kernel void parScanComposeFromSubarrays(
-   __global    uint* data, //length n
-   __local  uint* x,    //length m
-   __global    uint* part, //length k
+   __global char* data, //length n
+   __local  char* x,    //length m
+   __global char* part, //length k
             uint n) {
 
    //global identifiers
    int gid = get_global_id(0);
-   int index0 = (gid*4);
-   int index1 = (gid*4)+2;
+   int index0 = (gid*2);
+   int index1 = (gid*2)+1;
 
    //list lengths
-   int m = wx*4;
+   int m = wx*2;
    int k = get_num_groups(0);
 
    //sweepup on partial results   
    sweepup2(part, k);
    //last work item puts the identity into the end of the array
    if(gid==(k/2)-1) {
-      part[index1] = 0;
-      part[index1+1] = 1;
+      part[index1] = 2;
    }
    //sweepdown on partial results
    sweepdown2(part, k);
@@ -200,35 +189,27 @@ __kernel void parScanComposeFromSubarrays(
 
    //local identifiers
    int lid = get_local_id(0);
-   int local_index0 = (lid*4);
-   int local_index1 = (lid*4)+2;
-   int grpid = get_group_id(0)*2;
+   int local_index0 = (lid*2);
+   int local_index1 = (lid*2)+1;
+   int grpid = get_group_id(0);
 
    //copy data into local memory
-   x[local_index0] = (index0 < n) ? data[index0] : 0;
-   x[local_index0+1] = (index0+1 < n) ? data[index0+1] : 1;
-   x[local_index1] = (index1 < n) ? data[index1] : 0;
-   x[local_index1+1] = (index1+1 < n) ? data[index1+1] : 1;
+   x[local_index0] = (index0 < n) ? data[index0] : 2;
+   x[local_index1] = (index1 < n) ? data[index1] : 2;
 
    //compose current data with result from previous group
-   uint2 h1 = compose(part[grpid], part[grpid+1], 
-      x[local_index0], x[local_index0+1]);
-   x[local_index0] = h1.x;
-   x[local_index0+1] = h1.y;
+   char h1 = compose(part[grpid], x[local_index0]);
+   x[local_index0] = h1;
 
-   uint2 h2 = compose(part[grpid], part[grpid+1], 
-      x[local_index1], x[local_index1+1]);
-   x[local_index1] = h2.x;
-   x[local_index1+1] = h2.y;
+   char h2 = compose(part[grpid], x[local_index1]);
+   x[local_index1] = h2;
 
    //copy back to global data
    if(index0 < n) {
       data[index0] = x[local_index0];
-      data[index0+1] = x[local_index0+1];
    }
    if(index1 < n) {
       data[index1] = x[local_index1];
-      data[index1+1] = x[local_index1+1];
    }
 }
 
@@ -249,11 +230,12 @@ inline void scan(__global uint* x, uint size){
 }
 
 inline void inclusive_step(__global char* x, uint size){
+    uint gid = get_global_id(0);
     for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
         barrier(CLK_GLOBAL_MEM_FENCE);
         
         int mask = (sub_size / 2) - 1,
-            stride = sub_size / 4;
+            stride = sub_size /  4;
         
         if((gid & mask) == mask){
             uint ind0 = gid;
