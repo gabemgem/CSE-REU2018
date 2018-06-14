@@ -189,20 +189,20 @@ int main() {
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
-   function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_char), function, &err);
+   function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                     input_length * sizeof(cl_char), NULL, &err);
 
-   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), finalResults, &err);
+   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
+                   input_length * sizeof(cl_uint), NULL, &err);
 
-   escape_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), escape, &err);
+   escape_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY,
+                   input_length * sizeof(cl_uint), NULL, &err);
 
-   partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, num_groups * sizeof(cl_uint), partial_results, &err);
+   partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                    num_groups * sizeof(cl_uint), NULL, &err);
 
-   separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), separator, &err);
+   separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                      input_length * sizeof(cl_uint), NULL, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
