@@ -247,8 +247,6 @@ inline void inclusive_step(__global char* x, uint size){
 }
 
 __kernel void parScanComposeInclusive(__global char* func, uint size) {
-    //wrote code in other functions for easier writing
-
     //scan step
     scan(func, size);
 
@@ -282,18 +280,7 @@ __kernel void calcFunc(__global char* S,
 
    parallelScanCompose(function);
 
-   if(global_addr == 0){
-      delimited[global_addr] = open;
-   }
-
-   delimited[global_addr] = (function[global_addr] & (delimited[0] + 1)) >> delimited[0];
-   separator[global_addr] = (input==SEP) && !delimited[global_addr];
-
-   parallelScan(separator);
-
-   if(separator[global_addr] != separator[global_addr+1]) {
-      group_result[separator[global_addr]] = global_addr;
-   }
+   
 
 }
 
