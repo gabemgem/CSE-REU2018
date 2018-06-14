@@ -183,21 +183,32 @@ int main() {
    /* Shared memory for findSep */
    cl_uint* separator = malloc(input_length * sizeof(cl_uint));
    cl_uint firstCharacter;
-   cl_uint* finalResults;
+   cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
    /* Shared memory for all */
-   cl_char* function = malloc(input_length * sizeof(cl_char) * 2);
+   cl_char* function = malloc(input_length * sizeof(cl_char));
    
    
-   /* Create buffer for input string */
+   /* Create buffers */
    cl_mem input_buffer, function_buffer, output_buffer;
-   cl_mem input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
+   cl_mem escape_buffer, partial_buffer, separator_buffer;
+   
+   input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
 
-   cl_mem function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+   function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_char), function, &err);
 
-   cl_mem output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), finalResults, &err);
+
+   escape_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), escape, &err);
+
+   partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), partial_results, &err);
+
+   separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+         CL_MEM_COPY_HOST_PTR, input_length * sizeof(cl_uint), separator, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
@@ -240,7 +251,7 @@ int main() {
    err = clSetKernelArg(calculateFunction, 0, sizeof(cl_mem), &input_buffer);
    err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
    err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), &input_length);
-   err |= clSetKernelArg(calculateFunction, 3, input_length * sizeof(cl_uint), &escape);
+   err |= clSetKernelArg(calculateFunction, 3, sizeof(cl_mem), &escape_buffer);
    err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for calcFun");
@@ -249,8 +260,8 @@ int main() {
 
    err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunction, 1, NULL, &local_array);
-   err |= clSetKernelArg(parScanFunction, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
-   err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), input_length);
+   err |= clSetKernelArg(parScanFunction, 2, sizeof(cl_mem), &partial_buffer);
+   err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), &input_length);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for parScan");
       exit(1);
@@ -258,8 +269,8 @@ int main() {
 
    err = clSetKernelArg(parScanFunctionWithSubarrays, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 1, NULL, &local_array);
-   err |= clSetKernelArg(parScanFunctionWithSubarrays, 2, (global_size/local_size) * sizeof(cl_uint), partial_results);
-   err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), input_length);
+   err |= clSetKernelArg(parScanFunctionWithSubarrays, 2, sizeof(cl_mem), &partial_buffer);
+   err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), &input_length);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for parScanWithSubarrays");
       exit(1);
@@ -267,7 +278,7 @@ int main() {
 
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(findSeparators, 2, input_length*sizeof(cl_uint), &separator);
+   err |= clSetKernelArg(findSeparators, 2, sizeof(cl_mem), &separator_buffer);
    err |= clSetKernelArg(findSeparators, 3, sizeof(char), &specChars[0]);
    err |= clSetKernelArg(findSeparators, 3, sizeof(cl_uint), &firstCharacter);
    err |= clSetKernelArg(findSeparators, 3, sizeof(cl_mem), &output_buffer);
@@ -309,8 +320,8 @@ int main() {
    clFinish(queue);
 
    /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, function_buffer, CL_TRUE, 0,
-         input_length * sizeof(cl_char), function, 0, NULL, NULL);
+   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
+         input_length * sizeof(cl_uint), output, 0, NULL, NULL);
 
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
@@ -324,7 +335,7 @@ int main() {
    free(function);
    free(delimited);
    free(separator);
-   free(specChars);
+   free(output);
 
    clReleaseDevice(device);
 
