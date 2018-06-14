@@ -277,12 +277,12 @@ int main() {
       exit(1);
    }
 
-   err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
-   err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
-   if(err != CL_SUCCESS){
-      perror("Couldn't create a kernel argument for parScanComposeFuncInc");
-      exit(1);
-   }
+//    err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
+//    err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
+//    if(err != CL_SUCCESS){
+//       perror("Couldn't create a kernel argument for parScanComposeFuncInc");
+//       exit(1);
+//    }
 
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_mem), &input_buffer);
