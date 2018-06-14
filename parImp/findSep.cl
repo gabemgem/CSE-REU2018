@@ -3,13 +3,12 @@
 //h = g(f)
 //the identity is defined by the bits 0b10 (i.e. 2)
 inline char compose(char f, char g) {
-   char[] __f = {f & 1, (f & 2) >> 1};
-   char[] __g = {g & 1, (g & 2) >> 1};
    
    char h = 0;
-
-   h |= g[f[0]];
-   h |= g[f[1]] << 1;
+   //puts g(f(0)) into the first bit of h
+   h |= (g & (1 << (f & 1))) >> (f & 1);
+   //puts g(f(1)) into the second bit of h
+   h |= (g & 1 << ((f&2) >> 1)) << (1 - ((f & 2) >> 1));
 
    return h;
 }
@@ -89,7 +88,7 @@ __kernel void parScanCompose(
    //save partial result from each work group
    if (lid == (wx-1)) {
       part[grpid] = x[local_index1];
-      x[local_index1] = 2;
+      x[local_index1] = 2;//10 i.e. 2 is the identity
    }
    //sweepdown on each subarray
    sweepdown1(x,m);
@@ -300,18 +299,7 @@ __kernel void calcFunc(__global char* S,
 
    parallelScanCompose(function);
 
-   if(global_addr == 0){
-      delimited[global_addr] = open;
-   }
-
-   delimited[global_addr] = (function[global_addr] & (delimited[0] + 1)) >> delimited[0];
-   separator[global_addr] = (input==SEP) && !delimited[global_addr];
-
-   parallelScan(separator);
-
-   if(separator[global_addr] != separator[global_addr+1]) {
-      group_result[separator[global_addr]] = global_addr;
-   }
+   
 
 }
 
