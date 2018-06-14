@@ -213,49 +213,66 @@ __kernel void parScanComposeFromSubarrays(
    }
 }
 
-inline void scan(__global uint* x, uint size){
-    uint gid = get_global_id(0);
-    uint ind1 = (gid*2)+1;
-    uint depth = log2(size);
-    for(uint d=0; d<depth; ++d){
-        barrier(CLK_GLOBAL_MEM_FENCE);
-        int mask = (0x1 << d) - 1;
-		if((gid & mask) == mask) {
-			uint offset = 0x1 << d;
-			uint ind0 = ind1 - offset;
-			char h = compose(x[ind0], x[ind1]);
-			x[ind1] = h;
-		}
-    }
+__kernel void parScanComposeFuncInc(__global char* func, uint size) {
+   //scan step
+   uint gid = get_global_id(0);
+   uint ind1 = (gid*2)+1;
+   uint depth = log2(size);
+   for(uint d=0; d<depth; ++d){
+      barrier(CLK_GLOBAL_MEM_FENCE);
+      int mask = (0x1 << d) - 1;
+      if((gid & mask) == mask) {
+         uint offset = 0x1 << d;
+         uint ind0 = ind1 - offset;
+         char h = compose(x[ind0], x[ind1]);
+         x[ind1] = h;
+      }
+   }
+
+   //post scan inclusive step
+   for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
+      barrier(CLK_GLOBAL_MEM_FENCE);
+      int mask = (sub_size / 2) - 1,
+          stride = sub_size /  4;
+
+      if((gid & mask) == mask){
+         uint ind0 = gid;
+         uint ind1 = gid + stride;
+
+         char h = compose(x[ind0], x[ind1]);
+         x[ind1] = h;
+      }
+   }
 }
 
-inline void inclusive_step(__global char* x, uint size){
-    uint gid = get_global_id(0);
-    for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
-        barrier(CLK_GLOBAL_MEM_FENCE);
-        
-        int mask = (sub_size / 2) - 1,
-            stride = sub_size /  4;
-        
-        if((gid & mask) == mask){
-            uint ind0 = gid;
-            uint ind1 = gid + stride;
+inline void parScanAdd(__global uint* data, uint size){
+   //scan step
+   uint gid = get_global_id(0);
+   uint ind1 = (gid*2)+1;
+   uint depth = log2(size);
+   for(uint d=0; d<depth; ++d){
+      barrier(CLK_GLOBAL_MEM_FENCE);
+      int mask = (0x1 << d) - 1;
+      if((gid & mask) == mask) {
+         uint offset = 0x1 << d;
+         uint ind0 = ind1 - offset;
+         data[ind1] += data[ind0];
+      }
+   }
 
-            char h = compose(x[ind0], x[ind1]);
-            x[ind1] = h;
-        }
-    }
-}
+   //post scan inclusive step
+   for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
+      barrier(CLK_GLOBAL_MEM_FENCE);
+      int mask = (sub_size / 2) - 1,
+          stride = sub_size /  4;
 
-__kernel void parScanComposeInclusive(__global char* func, uint size) {
-    //wrote code in other functions for easier writing
+      if((gid & mask) == mask){
+         uint ind0 = gid;
+         uint ind1 = gid + stride;
 
-    //scan step
-    scan(func, size);
-
-    //post scan inclusive step
-    inclusive_step(func, size);
-
+        data[ind1] += data[ind0];
+      }
+   }
 }
 
 /* specChars: SEP, OPEN, CLOSE, ESC */
@@ -299,19 +316,23 @@ __kernel void calcFunc(__global char* S,
 }
 
 /* kernel to find the separators in S using the calculated functions */
-__kernel void findSep(__global uint* function, 
+__kernel void findSep(__global uint* function, uint size,
       __global char* S, __global uint* separator, 
-      char SEP, uint firstCharacter, __global uint* final_results) {
+      char SEP, char firstCharacter, __global uint* final_results) {
    //global identifier
    uint gid = get_global_id(0);
    //determine if char at gid is a valid separator
    separator[gid] = (S[gid] == SEP) && !(function[gid] & 1<<firstCharacter);
    //perform a parallel scan - add on the array of valid separators
-   uint parallelScanResult = work_group_scan_inclusive_add(separator[gid]);
-   separator[gid] = parallelScanResult;
+   
+   parScanAdd(separator, size);
+   uint scanResult = separator[gid];
+//    uint parallelScanResult = work_group_scan_inclusive_add(separator[gid]);
+//    separator[gid] = parallelScanResult;
+
    //store locations in final result array
-   if(((gid==0) && (S[gid]==SEP)) || (parallelScanResult!=separator[gid-1])) {
-      final_results[parallelScanResult-1] = gid;
+   if(((gid==0) && (S[gid]==SEP)) || (scanResult !=separator[gid-1])) {
+      final_results[scanResult-1] = gid;
    }
 
 }
