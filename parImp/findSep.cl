@@ -297,3 +297,21 @@ __kernel void calcFunc(__global char* S,
    }
 
 }
+
+/* kernel to find the separators in S using the calculated functions */
+__kernel void findSep(__global uint* function, 
+      __global char* S, __global uint* separator, 
+      char SEP, uint firstCharacter, __global uint* final_results) {
+   //global identifier
+   uint gid = get_global_id(0);
+   //determine if char at gid is a valid separator
+   separator[gid] = (S[gid] == SEP) && !(function[gid] & 1<<firstCharacter);
+   //perform a parallel scan - add on the array of valid separators
+   uint parallelScanResult = work_group_scan_inclusive_add(separator[gid]);
+   separator[gid] = parallelScanResult;
+   //store locations in final result array
+   if(((gid==0) && (S[gid]==SEP)) || (parallelScanResult!=separator[gid-1])) {
+      final_results[parallelScanResult-1] = gid;
+   }
+
+}
