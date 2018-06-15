@@ -251,12 +251,28 @@ int main() {
 
    /* Create kernel arguments */
    err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for initFunction:input buffer");
+      exit(1);
+   }
    err |= clSetKernelArg(initFunction, 1, specChars_length*sizeof(char), &specChars);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for initFunction:specChars");
+      exit(1);
+   }
    err |= clSetKernelArg(initFunction, 2, sizeof(cl_int), &input_length);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for initFunction:input length");
+      exit(1);
+   }
    err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &escape_buffer);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create a kernel argument for initFunction:escape buffer");
+      exit(1);
+   }
    err |= clSetKernelArg(initFunction, 4, sizeof(cl_mem), &function_buffer);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for initFunction");
+      perror("Couldn't create a kernel argument for initFunction:function buffer");
       exit(1);
    }
 
