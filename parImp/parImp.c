@@ -355,6 +355,7 @@ int main() {
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
    if(err != CL_SUCCESS) {
+      perror("%d\n", err);
       perror("Couldn't read the buffer");
       exit(1);
    }
