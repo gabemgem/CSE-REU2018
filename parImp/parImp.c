@@ -343,11 +343,16 @@ int main() {
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
-
    if(err != CL_SUCCESS) {
       perror("Couldn't read the buffer");
       exit(1);
    }
+
+   printf("[%d", finalResults[0]);
+   for(int i=1; i<input_length; ++i) {
+      printf(", %d", finalResults[i]);
+   }
+   printf("]\n");
    
    /* Deallocate resources */
    free(input_string);
