@@ -1,3 +1,10 @@
+#define SEP ','
+#define OPEN '['
+#define CLOSE ']'
+#define ESC '\\'
+
+
+
 //function to compose 2-variable boolean functions
 //functions represented as two bits of a char
 //h = g(f)
@@ -269,8 +276,7 @@ inline void parScanAdd(__global uint* data, uint size){
 
 /* specChars: SEP, OPEN, CLOSE, ESC */
 
-__kernel void initFunc(__global char* S,
-       __global char* specChars, uint S_length, 
+__kernel void initFunc(__global char* S, uint S_length, 
        __global char* escape, __global char* function) {
 
    uint global_addr = get_global_id(0);
@@ -290,8 +296,8 @@ __kernel void initFunc(__global char* S,
 
 /* kernel to find the separators in S using the calculated functions */
 __kernel void findSep(__global uint* function, uint size,
-      __global char* S, __global uint* separator, 
-      char SEP, char firstCharacter, __global uint* final_results) {
+      __global char* S, __global uint* separator,
+       char firstCharacter, __global uint* final_results) {
    //global identifier
    uint gid = get_global_id(0);
    //determine if char at gid is a valid separator

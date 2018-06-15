@@ -149,14 +149,6 @@ int main() {
    /* Data and buffers */
    char* input_string;
    cl_int input_length;
-   char* specChars = malloc(4*sizeof(char));
-   specChars[0] = ",";
-   specChars[1] = "[";
-   specChars[2] = "]";
-   specChars[3] = "\\";
-   size_t specChars_length = 4;
-
-   
 
 
    /* Get data from file */
@@ -259,22 +251,17 @@ int main() {
       perror("Couldn't create a kernel argument for initFunction:input buffer");
       exit(1);
    }
-   err |= clSetKernelArg(initFunction, 1, 4*sizeof(char), &specChars);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for initFunction:specChars");
-      exit(1);
-   }
-   err |= clSetKernelArg(initFunction, 2, sizeof(cl_int), &input_length);
+   err |= clSetKernelArg(initFunction, 1, sizeof(cl_int), &input_length);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for initFunction:input length");
       exit(1);
    }
-   err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &escape_buffer);
+   err |= clSetKernelArg(initFunction, 2, sizeof(cl_mem), &escape_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for initFunction:escape buffer");
       exit(1);
    }
-   err |= clSetKernelArg(initFunction, 4, sizeof(cl_mem), &function_buffer);
+   err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &function_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for initFunction:function buffer");
       exit(1);
@@ -310,9 +297,8 @@ int main() {
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_uint), &input_length);
    err |= clSetKernelArg(findSeparators, 2, sizeof(cl_mem), &input_buffer);
    err |= clSetKernelArg(findSeparators, 3, sizeof(cl_mem), &separator_buffer);
-   err |= clSetKernelArg(findSeparators, 4, sizeof(char), specChars);
-   err |= clSetKernelArg(findSeparators, 5, sizeof(cl_char), &firstCharacter);
-   err |= clSetKernelArg(findSeparators, 6, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(findSeparators, 4, sizeof(cl_char), &firstCharacter);
+   err |= clSetKernelArg(findSeparators, 5, sizeof(cl_mem), &output_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for findSeparators");
       exit(1);
@@ -378,7 +364,6 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
-   free(specChars);
    //free(local_array);
    free(finalResults);
 
