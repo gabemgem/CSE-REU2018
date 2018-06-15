@@ -112,11 +112,11 @@ __kernel void parScanCompose(
 //function to do a sweepup for parallel scan COMPOSE
 //used on partial results for first scan
 //only uses global memory
-inline void sweepup2(__global uint* x, int k) {
+inline void sweepup2(__global char* x, int k) {
    int gid = get_global_id(0);
    if(gid<k/2) {//only use work items with relevant data
       int ind1 = (gid*2)+1;//g function location
-      int depth = log2(k);
+      int depth = log2((float)k);
       for(int d=0; d<depth; ++d) {
          barrier(CLK_GLOBAL_MEM_FENCE);//sync all work items
          int mask = (0x1 << d) - 1;
@@ -124,7 +124,7 @@ inline void sweepup2(__global uint* x, int k) {
             int offset = 0x1 << d;
             int ind0 = ind1 - offset;//f function location
             char h = compose(x[ind0], x[ind1]);
-            x[ind1] = h1;
+            x[ind1] = h;
          }
       }
    }
@@ -133,11 +133,11 @@ inline void sweepup2(__global uint* x, int k) {
 //function to do a sweepdown for parallel scan COMPOSE
 //used on partial results for first scan
 //only uses global memory
-inline void sweepdown2(__global uint* x, int k) {
+inline void sweepdown2(__global char* x, int k) {
    int gid = get_global_id(0);
    if(gid<k/2) {//only use work items with relevant data
       int ind1 = (gid*2)+1;//g function location
-      int depth = log2(k);
+      int depth = log2((float)k);
       for(int d=depth-1; d>-1; --d) {
          barrier(CLK_GLOBAL_MEM_FENCE);//sync all work items
          int mask = (0x1 << d) - 1;
@@ -145,7 +145,7 @@ inline void sweepdown2(__global uint* x, int k) {
             int offset = (0x1 << d)*2;
             int ind0 = ind1 - offset;//f function location
             char temp = x[ind1];//store g function
-            char h = compose(x[ind0], x[ind1])
+            char h = compose(x[ind0], x[ind1]);
             x[ind1] = h;//place composed function into g location
             x[ind0] = temp;//place g function into f location
          }
@@ -216,7 +216,7 @@ __kernel void parScanComposeFromSubarrays(
 __kernel void parScanComposeFuncInc(__global char* func, uint size) {
    uint gid = get_global_id(0);
    uint ind1 = (gid*2)+1;
-   uint depth = log2(size);
+   uint depth = log2((float)size);
    
    //scan step
    for(uint d=0; d<depth; ++d){
@@ -244,7 +244,7 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
 inline void parScanAdd(__global uint* data, uint size){
    uint gid = get_global_id(0);
    uint ind1 = (gid*2)+1;
-   uint depth = log2(size);
+   uint depth = log2((float)size);
    
    //scan step
    for(uint d=0; d<depth; ++d){
@@ -270,7 +270,7 @@ inline void parScanAdd(__global uint* data, uint size){
 /* specChars: SEP, OPEN, CLOSE, ESC */
 
 __kernel void initFunc(__global char* S,
-       __global char* specChars, __global uint S_length, 
+       __global char* specChars, uint S_length, 
        __global char* escape, __global char* function) {
 
    uint global_addr = get_global_id(0);
