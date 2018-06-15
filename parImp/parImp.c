@@ -302,6 +302,8 @@ int main() {
    //pads string to length of next power of 2 with spaces
    pad_string(&input_string, &input_length);
 
+   printf("%d\n", input_length);
+
    /* Create device and context */
    device = create_device();
    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
@@ -320,7 +322,6 @@ int main() {
    /* Shared memory for findSep */
    cl_char firstCharacter = (input_string[0] == SEP);
    cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
-   
    
    /* Create buffers */
    cl_mem input_buffer, function_buffer, output_buffer;
@@ -448,7 +449,6 @@ int main() {
    
    /* Deallocate resources */
    free(input_string);
-   free(input_length);
    //free(local_array);
    free(finalResults);
 

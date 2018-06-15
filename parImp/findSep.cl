@@ -305,7 +305,7 @@ __kernel void findSep(__global uint* function, uint size,
    uint scanResult = separator[gid];
 
    //store locations in final result array
-   if(((gid==0) && (S[gid]==SEP)) || (scanResult !=separator[gid-1])) {
+   if(((gid==0) && (S[gid]==SEP)) || ((gid!=0) && (scanResult != separator[gid-1]))) {
       final_results[scanResult-1] = gid;
    }
 
