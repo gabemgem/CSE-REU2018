@@ -1,6 +1,7 @@
 #define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
 //#define INPUT_SIZE 64//Use if input size is already known
+#define _GNU_SOURCE
 
 #include <math.h>
 #include <stdio.h>
