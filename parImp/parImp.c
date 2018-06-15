@@ -317,6 +317,15 @@ int main() {
       exit(1);
    }
 
+   /*
+   * err = clEnqueueNDRangeKernel(queue, parScanComposeFuncInc, 1, NULL, &global_size, 
+   *       &local_size, 0, NULL, NULL); 
+   * if(err != CL_SUCCESS) {
+   *    perror("Couldn't enqueue the parScanWithSubarrays");
+   *    exit(1);
+   * }
+   */
+
    err = clEnqueueNDRangeKernel(queue, findSeparators, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
