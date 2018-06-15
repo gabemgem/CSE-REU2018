@@ -96,11 +96,11 @@ void error_handler(cl_int err, char* message) {
    };
 
    if (err >= -63 && err <= 0)
-      perror("%s", strings[-err]);
+      perror(strings[-err]);
    else
-      perror("%s", strings[64]);
-   if(message!=NULL)
-      perror("\n%s", message);
+      perror(strings[64]);
+   if(message != NULL)
+      perror(message);
    exit(1);
    
 }
