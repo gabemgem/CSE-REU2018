@@ -212,34 +212,34 @@ int main() {
    if(err != CL_SUCCESS) {
       perror("Couldn't create input and output buffers");
       exit(1);   
-   };
+   }
 
    /* Create a command queue */
    queue = clCreateCommandQueue(context, device, 0, &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a command queue");
       exit(1);   
-   };
+   }
 
    /* Creating kernels */
    initFunction = clCreateKernel(program, "initFunc", &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create initFunc kernel");
       exit(1);
-   };
+   }
 
    parScanFunction = clCreateKernel(program, "parScanCompose", &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create parScanCompose kernel");
       exit(1);
-   };
+   }
 
    parScanFunctionWithSubarrays = clCreateKernel(program, 
                                   "parScanComposeFromSubarrays", &err);
    if(err != CL_SUCCESS) {
       perror("Couldn't create parScanComposeFromSubarrays kernel");
       exit(1);
-   };
+   }
 
    parScanComposeFuncInc = clCreateKernel(program, "parScanComposeFuncInc", &err);
    if(err != CL_SUCCESS) {
@@ -314,7 +314,7 @@ int main() {
    err |= clSetKernelArg(findSeparators, 5, sizeof(cl_char), &firstCharacter);
    err |= clSetKernelArg(findSeparators, 6, sizeof(cl_mem), &output_buffer);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for findSeparators);
+      perror("Couldn't create a kernel argument for findSeparators");
       exit(1);
    }
 
