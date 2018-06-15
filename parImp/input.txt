@@ -1,2 +1,2 @@
-foo,[bar],[ba,z],[qu\]u\\x],xyzzy[p,l,[u,g,h]blast,yarf
+foo,[bar],[ba,z],[qu\]u\\x],xyzzy[p,l,[u,g,h]blast,yarf,IAmStuck,o
 
