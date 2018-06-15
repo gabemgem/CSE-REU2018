@@ -197,7 +197,7 @@ int main() {
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
                    input_length * sizeof(cl_uint), NULL, &err);
 
-   escape_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY,
+   escape_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                    input_length * sizeof(cl_char), NULL, &err);
 
    partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
