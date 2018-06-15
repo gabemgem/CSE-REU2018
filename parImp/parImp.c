@@ -143,7 +143,7 @@ int main() {
    cl_kernel parScanComposeFuncInc;
    cl_kernel findSeparators;
    cl_command_queue queue;
-   cl_int i, j, err;
+   cl_int err;
 
    /* Data and buffers */
    char* input_string;
@@ -177,7 +177,7 @@ int main() {
    cl_int num_groups = global_size/local_size;//NUM BLOCKS
    
    /* Shared memory for parallel scan kernels */
-   cl_uint* local_array;
+   //cl_uint* local_array;
    /* Shared memory for findSep */
    cl_char firstCharacter = (input_string[0] == specChars[0]);
    cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
@@ -357,7 +357,7 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
-   free(local_array);
+   //free(local_array);
    free(finalResults);
 
    clReleaseDevice(device);
