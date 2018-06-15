@@ -173,6 +173,7 @@ __kernel void parScanComposeFromSubarrays(
    int index1 = (gid*2)+1;
 
    //list lengths
+   int wx = get_local_size(0);
    int m = wx*2;
    int k = get_num_groups(0);
 
