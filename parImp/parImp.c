@@ -359,10 +359,11 @@ int main() {
    clReleaseKernel(initFunction);
    clReleaseKernel(parScanFunction);
    clReleaseKernel(parScanFunctionWithSubarrays);
+   clReleaseKernel(parScanComposeFuncInc);
    clReleaseKernel(findSeparators);
 
-   clReleaseMemObject(function_buffer);
    clReleaseMemObject(input_buffer);
+   clReleaseMemObject(function_buffer);
    clReleaseMemObject(output_buffer);
    clReleaseMemObject(escape_buffer);
    clReleaseMemObject(partial_buffer);
