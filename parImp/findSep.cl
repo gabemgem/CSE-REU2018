@@ -274,16 +274,13 @@ inline void parScanAdd(__global uint* data, uint size){
    }
 }
 
-/* specChars: SEP, OPEN, CLOSE, ESC */
+
 
 __kernel void initFunc(__global char* S, uint S_length, 
        __global char* escape, __global char* function) {
 
    uint global_addr = get_global_id(0);
    char input = S[global_addr];
-   char OPEN = specChars[1];
-   char CLOSE = specChars[2];
-   char ESC = specChars[3];
    
    char open = (input==OPEN);
    char close = (input==CLOSE);
