@@ -251,12 +251,12 @@ int main() {
 
    /* Create kernel arguments */
    err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(initFunction, 1, specChars_length, &specChars);
+   err |= clSetKernelArg(initFunction, 1, specChars_length*sizeof(char), &specChars);
    err |= clSetKernelArg(initFunction, 2, sizeof(cl_int), &input_length);
    err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &escape_buffer);
    err |= clSetKernelArg(initFunction, 4, sizeof(cl_mem), &function_buffer);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for calcFun");
+      perror("Couldn't create a kernel argument for initFunction");
       exit(1);
    }
 
@@ -294,7 +294,7 @@ int main() {
    err |= clSetKernelArg(findSeparators, 5, sizeof(cl_char), &firstCharacter);
    err |= clSetKernelArg(findSeparators, 6, sizeof(cl_mem), &output_buffer);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for parScanWithSubarrays");
+      perror("Couldn't create a kernel argument for findSeparators);
       exit(1);
    }
 
