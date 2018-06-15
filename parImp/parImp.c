@@ -19,6 +19,92 @@
 #include <CL/cl.h>
 #endif
 
+
+void error_handler(cl_int err, char* message) {
+   if(err == CL_SUCCESS)
+      return;
+   static const char* strings[] =
+   {
+      // Error Codes
+      "CL_SUCCESS"                                  //   0
+      , "CL_DEVICE_NOT_FOUND"                         //  -1
+      , "CL_DEVICE_NOT_AVAILABLE"                     //  -2
+      , "CL_COMPILER_NOT_AVAILABLE"                   //  -3
+      , "CL_MEM_OBJECT_ALLOCATION_FAILURE"            //  -4
+      , "CL_OUT_OF_RESOURCES"                         //  -5
+      , "CL_OUT_OF_HOST_MEMORY"                       //  -6
+      , "CL_PROFILING_INFO_NOT_AVAILABLE"             //  -7
+      , "CL_MEM_COPY_OVERLAP"                         //  -8
+      , "CL_IMAGE_FORMAT_MISMATCH"                    //  -9
+      , "CL_IMAGE_FORMAT_NOT_SUPPORTED"               //  -10
+      , "CL_BUILD_PROGRAM_FAILURE"                    //  -11
+      , "CL_MAP_FAILURE"                              //  -12
+
+      , ""    //  -13
+      , ""    //  -14
+      , ""    //  -15
+      , ""    //  -16
+      , ""    //  -17
+      , ""    //  -18
+      , ""    //  -19
+      , ""    //  -20
+      , ""    //  -21
+      , ""    //  -22
+      , ""    //  -23
+      , ""    //  -24
+      , ""    //  -25
+      , ""    //  -26
+      , ""    //  -27
+      , ""    //  -28
+      , ""    //  -29
+
+      , "CL_INVALID_VALUE"                            //  -30
+      , "CL_INVALID_DEVICE_TYPE"                      //  -31
+      , "CL_INVALID_PLATFORM"                         //  -32
+      , "CL_INVALID_DEVICE"                           //  -33
+      , "CL_INVALID_CONTEXT"                          //  -34
+      , "CL_INVALID_QUEUE_PROPERTIES"                 //  -35
+      , "CL_INVALID_COMMAND_QUEUE"                    //  -36
+      , "CL_INVALID_HOST_PTR"                         //  -37
+      , "CL_INVALID_MEM_OBJECT"                       //  -38
+      , "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR"          //  -39
+      , "CL_INVALID_IMAGE_SIZE"                       //  -40
+      , "CL_INVALID_SAMPLER"                          //  -41
+      , "CL_INVALID_BINARY"                           //  -42
+      , "CL_INVALID_BUILD_OPTIONS"                    //  -43
+      , "CL_INVALID_PROGRAM"                          //  -44
+      , "CL_INVALID_PROGRAM_EXECUTABLE"               //  -45
+      , "CL_INVALID_KERNEL_NAME"                      //  -46
+      , "CL_INVALID_KERNEL_DEFINITION"                //  -47
+      , "CL_INVALID_KERNEL"                           //  -48
+      , "CL_INVALID_ARG_INDEX"                        //  -49
+      , "CL_INVALID_ARG_VALUE"                        //  -50
+      , "CL_INVALID_ARG_SIZE"                         //  -51
+      , "CL_INVALID_KERNEL_ARGS"                      //  -52
+      , "CL_INVALID_WORK_DIMENSION"                   //  -53
+      , "CL_INVALID_WORK_GROUP_SIZE"                  //  -54
+      , "CL_INVALID_WORK_ITEM_SIZE"                   //  -55
+      , "CL_INVALID_GLOBAL_OFFSET"                    //  -56
+      , "CL_INVALID_EVENT_WAIT_LIST"                  //  -57
+      , "CL_INVALID_EVENT"                            //  -58
+      , "CL_INVALID_OPERATION"                        //  -59
+      , "CL_INVALID_GL_OBJECT"                        //  -60
+      , "CL_INVALID_BUFFER_SIZE"                      //  -61
+      , "CL_INVALID_MIP_LEVEL"                        //  -62
+      , "CL_INVALID_GLOBAL_WORK_SIZE"                 //  -63
+      , "CL_UNKNOWN_ERROR_CODE"
+   };
+
+   if (err >= -63 && err <= 0)
+      perror("%s", strings[-err]);
+   else
+      perror("%s", strings[64]);
+   if(message!=NULL)
+      perror("\n%s", message);
+   exit(1);
+   
+}
+
 /* Find a GPU or CPU associated with the first available platform */
 cl_device_id create_device() {
 
@@ -28,20 +114,14 @@ cl_device_id create_device() {
 
    /* Identify a platform */
    err = clGetPlatformIDs(1, &platform, NULL);
-   if(err < 0) {
-      perror("Couldn't identify a platform");
-      exit(1);
-   } 
+   error_handler(err, "Couldn't identify a platform");
 
    /* Access a device */
    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &dev, NULL);
    if(err == CL_DEVICE_NOT_FOUND) {
       err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &dev, NULL);
    }
-   if(err < 0) {
-      perror("Couldn't access any devices");
-      exit(1);   
-   }
+   error_handler(err, "Couldn't access any devices");
 
    return dev;
 }
@@ -72,10 +152,7 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    /* Create program from file */
    program = clCreateProgramWithSource(ctx, 1, 
       (const char**)&program_buffer, &program_size, &err);
-   if(err < 0) {
-      perror("Couldn't create the program");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create the program");
    free(program_buffer);
 
    /* Build program */
@@ -164,10 +241,7 @@ int main() {
    /* Create device and context */
    device = create_device();
    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a context");
-      exit(1);   
-   }
+   error_handler(err, "Couldn't create a context");
 
    /* Build program */
    program = build_program(context, device, PROGRAM_FILE);
@@ -205,97 +279,59 @@ int main() {
 
    separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                       input_length * sizeof(cl_uint), NULL, &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create input and output buffers");
-      exit(1);   
-   }
+   error_handler(err, "Couldn't create buffers");
 
    /* Create a command queue */
    queue = clCreateCommandQueue(context, device, 0, &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a command queue");
-      exit(1);   
-   }
+   error_handler(err, "Couldn't create a command queue");
 
    /* Creating kernels */
    initFunction = clCreateKernel(program, "initFunc", &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create initFunc kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create initFunc kernel");
 
    parScanFunction = clCreateKernel(program, "parScanCompose", &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create parScanCompose kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create parScanCompose kernel");
 
    parScanFunctionWithSubarrays = clCreateKernel(program, 
                                   "parScanComposeFromSubarrays", &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create parScanComposeFromSubarrays kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create parScanComposeFromSubarrays kernel");
 
    parScanComposeFuncInc = clCreateKernel(program, "parScanComposeFuncInc", &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create parScanComposeFuncInc kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create parScanComposeFuncInc kernel");
 
    findSeparators = clCreateKernel(program, "findSep", &err);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create calcDel kernel");
-      exit(1);
-   };
+   error_handler(err, "Couldn't create findSeparators kernel");
 
    /* Create kernel arguments */
    err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for initFunction:input buffer");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create a kernel argument for initFunction:input buffer");
+
    err |= clSetKernelArg(initFunction, 1, sizeof(cl_int), &input_length);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for initFunction:input length");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create a kernel argument for initFunction:input length");
+
    err |= clSetKernelArg(initFunction, 2, sizeof(cl_mem), &escape_buffer);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for initFunction:escape buffer");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create a kernel argument for initFunction:escape buffer");
+
    err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &function_buffer);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for initFunction:function buffer");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create a kernel argument for initFunction:function buffer");
 
    /*
    err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunction, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunction, 2, sizeof(cl_mem), &partial_buffer);
    err |= clSetKernelArg(parScanFunction, 3, sizeof(cl_int), &input_length);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for parScan");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create a kernel argument for parScan");
 
    err = clSetKernelArg(parScanFunctionWithSubarrays, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 2, sizeof(cl_mem), &partial_buffer);
    err |= clSetKernelArg(parScanFunctionWithSubarrays, 3, sizeof(cl_int), &input_length);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for parScanWithSubarrays");
-      exit(1);
-   }*/
+   error_handler(err, "Couldn't create a kernel argument for parScanWithSubarrays");
+   */
 
     err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
     err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
-    if(err != CL_SUCCESS){
-       perror("Couldn't create a kernel argument for parScanComposeFuncInc");
-       exit(1);
-    }
+    error_handler(err, "Couldn't create a kernel argument for parScanComposeFuncInc");
 
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_uint), &input_length);
@@ -303,50 +339,34 @@ int main() {
    err |= clSetKernelArg(findSeparators, 3, sizeof(cl_mem), &separator_buffer);
    err |= clSetKernelArg(findSeparators, 4, sizeof(cl_char), &firstCharacter);
    err |= clSetKernelArg(findSeparators, 5, sizeof(cl_mem), &output_buffer);
-   if(err != CL_SUCCESS) {
-      perror("Couldn't create a kernel argument for findSeparators");
-      exit(1);
-   }
+   error_handler(err, "Couldn't create a kernel argument for findSeparators");
+
 
    /* Enqueue kernels */
    err = clEnqueueNDRangeKernel(queue, initFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-   if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the initFunc kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't enqueue the initFunc kernel");
+
 
    /*
    err = clEnqueueNDRangeKernel(queue, parScanFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-   if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the parScan kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't enqueue the parScan kernel");
 
    err = clEnqueueNDRangeKernel(queue, parScanFunctionWithSubarrays, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-   if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the parScanWithSubarrays kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't enqueue the parScanWithSubarrays kernel");
    */
 
    
    err = clEnqueueNDRangeKernel(queue, parScanComposeFuncInc, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-   if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the parScanWithSubarrays");
-      exit(1);
-   }
+   error_handler(err, "Couldn't enqueue the parScanWithSubarrays");
    
 
    err = clEnqueueNDRangeKernel(queue, findSeparators, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-   if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the calcDel kernel");
-      exit(1);
-   }
+   error_handler(err, "Couldn't enqueue the calcDel kernel");
 
    /* To ensure that parsing is done before reading the result*/
    clFinish(queue);
@@ -354,11 +374,7 @@ int main() {
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
-   if(err != CL_SUCCESS) {
-      perror("%d\n", err);
-      perror("Couldn't read the buffer");
-      exit(1);
-   }
+   error_handler(err, "Couldn't read the buffer");
 
    printf("[%d", finalResults[0]);
    for(int i=1; i<input_length; ++i) {
