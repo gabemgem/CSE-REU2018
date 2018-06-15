@@ -140,7 +140,7 @@ int main() {
    cl_kernel calculateFunction;
    cl_kernel parScanFunction;
    cl_kernel parScanFunctionWithSubarrays;
-//    cl_kernel parScanComposeFuncInc;
+   cl_kernel parScanComposeFuncInc;
    cl_kernel findSeparators;
    cl_command_queue queue;
    cl_int i, j, err;
@@ -236,11 +236,11 @@ int main() {
       exit(1);
    };
 
-//    parScanComposeFuncInc = clCreateKernel(program, "parScanComposeFuncInc", &err);
-//    if(err != CL_SUCCESS) {
-//       perror("Couldn't create parScanComposeFuncInc kernel");
-//       exit(1);
-//    }
+   parScanComposeFuncInc = clCreateKernel(program, "parScanComposeFuncInc", &err);
+   if(err != CL_SUCCESS) {
+      perror("Couldn't create parScanComposeFuncInc kernel");
+      exit(1);
+   }
 
    findSeparators = clCreateKernel(program, "findSep", &err);
    if(err != CL_SUCCESS) {
@@ -259,6 +259,7 @@ int main() {
       exit(1);
    }
 
+   /*
    err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(parScanFunction, 1, NULL, &local_array);
    err |= clSetKernelArg(parScanFunction, 2, sizeof(cl_mem), &partial_buffer);
@@ -275,14 +276,14 @@ int main() {
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for parScanWithSubarrays");
       exit(1);
-   }
+   }*/
 
-//    err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
-//    err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
-//    if(err != CL_SUCCESS){
-//       perror("Couldn't create a kernel argument for parScanComposeFuncInc");
-//       exit(1);
-//    }
+    err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
+    err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
+    if(err != CL_SUCCESS){
+       perror("Couldn't create a kernel argument for parScanComposeFuncInc");
+       exit(1);
+    }
 
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_mem), &input_buffer);
@@ -303,6 +304,7 @@ int main() {
       exit(1);
    }
 
+   /*
    err = clEnqueueNDRangeKernel(queue, parScanFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
@@ -316,15 +318,16 @@ int main() {
       perror("Couldn't enqueue the parScanWithSubarrays");
       exit(1);
    }
-
-   /*
-   * err = clEnqueueNDRangeKernel(queue, parScanComposeFuncInc, 1, NULL, &global_size, 
-   *       &local_size, 0, NULL, NULL); 
-   * if(err != CL_SUCCESS) {
-   *    perror("Couldn't enqueue the parScanWithSubarrays");
-   *    exit(1);
-   * }
    */
+
+   
+   err = clEnqueueNDRangeKernel(queue, parScanComposeFuncInc, 1, NULL, &global_size, 
+         &local_size, 0, NULL, NULL); 
+   if(err != CL_SUCCESS) {
+      perror("Couldn't enqueue the parScanWithSubarrays");
+      exit(1);
+   }
+   
 
    err = clEnqueueNDRangeKernel(queue, findSeparators, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
@@ -333,7 +336,7 @@ int main() {
       exit(1);
    }
 
-   /* To ensure that parsing is done before reading the result (not sure if needed)*/
+   /* To ensure that parsing is done before reading the result*/
    clFinish(queue);
 
    /* Read the kernel's output */
