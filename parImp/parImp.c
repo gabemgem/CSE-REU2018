@@ -2,6 +2,10 @@
 #define PROGRAM_FILE "findSep.cl"
 //#define INPUT_SIZE 64//Use if input size is already known
 #define _GNU_SOURCE
+#define SEP ','
+#define OPEN '['
+#define CLOSE ']'
+#define ESC '\\'
 
 #include <math.h>
 #include <stdio.h>
@@ -176,7 +180,7 @@ int main() {
    /* Shared memory for parallel scan kernels */
    //cl_uint* local_array;
    /* Shared memory for findSep */
-   cl_char firstCharacter = (input_string[0] == specChars[0]);
+   cl_char firstCharacter = (input_string[0] == SEP);
    cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
    
    
