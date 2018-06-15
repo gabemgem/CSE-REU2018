@@ -137,7 +137,7 @@ int main() {
    cl_device_id device;
    cl_context context;
    cl_program program;
-   cl_kernel calculateFunction;
+   cl_kernel initFunction;
    cl_kernel parScanFunction;
    cl_kernel parScanFunctionWithSubarrays;
 //    cl_kernel parScanComposeFuncInc;
@@ -217,9 +217,9 @@ int main() {
    };
 
    /* Creating kernels */
-   calculateFunction = clCreateKernel(program, "calcFunc", &err);
+   initFunction = clCreateKernel(program, "initFunc", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create calcFunc kernel");
+      perror("Couldn't create initFunc kernel");
       exit(1);
    };
 
@@ -249,11 +249,11 @@ int main() {
    };
 
    /* Create kernel arguments */
-   err = clSetKernelArg(calculateFunction, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(calculateFunction, 1, specChars_length, &specChars);
-   err |= clSetKernelArg(calculateFunction, 2, sizeof(cl_int), &input_length);
-   err |= clSetKernelArg(calculateFunction, 3, sizeof(cl_mem), &escape_buffer);
-   err |= clSetKernelArg(calculateFunction, 4, sizeof(cl_mem), &function_buffer);
+   err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
+   err |= clSetKernelArg(initFunction, 1, specChars_length, &specChars);
+   err |= clSetKernelArg(initFunction, 2, sizeof(cl_int), &input_length);
+   err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &escape_buffer);
+   err |= clSetKernelArg(initFunction, 4, sizeof(cl_mem), &function_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for calcFun");
       exit(1);
@@ -296,24 +296,24 @@ int main() {
    }
 
    /* Enqueue kernels */
-   err = clEnqueueNDRangeKernel(queue, calculateFunction, 1, NULL, &global_size, 
+   err = clEnqueueNDRangeKernel(queue, initFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the calcFunc");
+      perror("Couldn't enqueue the initFunc kernel");
       exit(1);
    }
 
    err = clEnqueueNDRangeKernel(queue, parScanFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the parScan");
+      perror("Couldn't enqueue the parScan kernel");
       exit(1);
    }
 
    err = clEnqueueNDRangeKernel(queue, parScanFunctionWithSubarrays, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the parScanWithSubarrays");
+      perror("Couldn't enqueue the parScanWithSubarrays kernel");
       exit(1);
    }
 
@@ -321,7 +321,7 @@ int main() {
    * err = clEnqueueNDRangeKernel(queue, parScanComposeFuncInc, 1, NULL, &global_size, 
    *       &local_size, 0, NULL, NULL); 
    * if(err != CL_SUCCESS) {
-   *    perror("Couldn't enqueue the parScanWithSubarrays");
+   *    perror("Couldn't enqueue the parScanWithSubarrays kernel");
    *    exit(1);
    * }
    */
@@ -329,7 +329,7 @@ int main() {
    err = clEnqueueNDRangeKernel(queue, findSeparators, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    if(err != CL_SUCCESS) {
-      perror("Couldn't enqueue the calcDel");
+      perror("Couldn't enqueue the calcDel kernel");
       exit(1);
    }
 
@@ -353,7 +353,7 @@ int main() {
 
    clReleaseDevice(device);
 
-   clReleaseKernel(calculateFunction);
+   clReleaseKernel(initFunction);
    clReleaseKernel(parScanFunction);
    clReleaseKernel(parScanFunctionWithSubarrays);
    clReleaseKernel(findSeparators);

@@ -213,7 +213,6 @@ __kernel void parScanComposeFromSubarrays(
 }
 
 __kernel void parScanComposeFuncInc(__global char* func, uint size) {
-   
    uint gid = get_global_id(0);
    uint ind1 = (gid*2)+1;
    uint depth = log2(size);
@@ -225,31 +224,28 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
       if((gid & mask) == mask) {
          uint offset = 0x1 << d;
          uint ind0 = ind1 - offset;
-         char h = compose(x[ind0], x[ind1]);
-         x[ind1] = h;
+         char h = compose(func[ind0], func[ind1]);
+         func[ind1] = h;
       }
    }
 
    //post scan inclusive step
-   for(uint sub_size = size; sub_size > 2; sub_size /= 2){
+   for(uint stride = size/4; stride > 0; stride /= 2){
       barrier(CLK_GLOBAL_MEM_FENCE);
-      int mask = (sub_size / 2) - 1,
-          stride = sub_size /  4;
-
-      if((gid & mask) == mask){
-         uint ind1 = gid + stride;
-
-         char h = compose(x[gid], x[ind1]);
-         x[ind1] = h;
+      uint ind1 = 2*stride*(gid + 1) - 1;
+      if(ind1 + stride < size){
+         char h = compose(func[ind1], func[ind1+stride]);
+         func[ind1+stride] = h;
       }
    }
 }
 
 inline void parScanAdd(__global uint* data, uint size){
-   //scan step
    uint gid = get_global_id(0);
    uint ind1 = (gid*2)+1;
    uint depth = log2(size);
+   
+   //scan step
    for(uint d=0; d<depth; ++d){
       barrier(CLK_GLOBAL_MEM_FENCE);
       int mask = (0x1 << d) - 1;
@@ -261,47 +257,31 @@ inline void parScanAdd(__global uint* data, uint size){
    }
 
    //post scan inclusive step
-   for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
+   for(uint stride = size/4; stride > 0; stride /= 2){
       barrier(CLK_GLOBAL_MEM_FENCE);
-      int mask = (sub_size / 2) - 1,
-          stride = sub_size /  4;
-
-      if((gid & mask) == mask){
-         uint ind0 = gid;
-         uint ind1 = gid + stride;
-
-        data[ind1] += data[ind0];
+      uint ind1 = 2*stride*(gid + 1) - 1;
+      if(ind1 + stride < size){
+         data[ind1 + stride] += data[ind1];
       }
    }
 }
 
 /* specChars: SEP, OPEN, CLOSE, ESC */
 
-__kernel void calcFunc(__global char* S,
+__kernel void initFunc(__global char* S,
        __global char* specChars, __global uint S_length, 
        __global uint* escape, __global char* function) {
 
-   
-   uint global_addr, local_addr;
-
    uint global_addr = get_global_id(0);
    char input = S[global_addr];
-   uint index = global_addr*2;
-
-   uint local_addr = get_local_id(0);
    
    char open = (input==specChars[1]);
    char close = (input==specChars[2]);
    escape[global_addr] = (input==specChars[3]);
    
-   function[index] = 0;
-   function[index] |= open;
-   function[index] |= (!close || escape[global_addr-1] || open) << 1;
-
-   parallelScanCompose(function);
-
-   
-
+   function[global_addr] = 0;
+   function[global_addr] |= open;
+   function[global_addr] |= (!close || escape[global_addr-1] || open) << 1;
 }
 
 /* kernel to find the separators in S using the calculated functions */
@@ -316,8 +296,6 @@ __kernel void findSep(__global uint* function, uint size,
    
    parScanAdd(separator, size);
    uint scanResult = separator[gid];
-//    uint parallelScanResult = work_group_scan_inclusive_add(separator[gid]);
-//    separator[gid] = parallelScanResult;
 
    //store locations in final result array
    if(((gid==0) && (S[gid]==SEP)) || (scanResult !=separator[gid-1])) {
