@@ -213,10 +213,12 @@ __kernel void parScanComposeFromSubarrays(
 }
 
 __kernel void parScanComposeFuncInc(__global char* func, uint size) {
-   //scan step
+   
    uint gid = get_global_id(0);
    uint ind1 = (gid*2)+1;
    uint depth = log2(size);
+   
+   //scan step
    for(uint d=0; d<depth; ++d){
       barrier(CLK_GLOBAL_MEM_FENCE);
       int mask = (0x1 << d) - 1;
@@ -229,16 +231,15 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
    }
 
    //post scan inclusive step
-   for(uint sub_size = n/2; sub_size > 2; sub_size /= 2){
+   for(uint sub_size = size; sub_size > 2; sub_size /= 2){
       barrier(CLK_GLOBAL_MEM_FENCE);
       int mask = (sub_size / 2) - 1,
           stride = sub_size /  4;
 
       if((gid & mask) == mask){
-         uint ind0 = gid;
          uint ind1 = gid + stride;
 
-         char h = compose(x[ind0], x[ind1]);
+         char h = compose(x[gid], x[ind1]);
          x[ind1] = h;
       }
    }
