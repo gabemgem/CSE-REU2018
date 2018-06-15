@@ -232,10 +232,10 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
    //post scan inclusive step
    for(uint stride = size/4; stride > 0; stride /= 2){
       barrier(CLK_GLOBAL_MEM_FENCE);
-      uint ind1 = 2*stride*(gid + 1) - 1;
-      if(ind1 + stride < size){
-         char h = compose(func[ind1], func[ind1+stride]);
-         func[ind1+stride] = h;
+      uint ind = 2*stride*(gid + 1) - 1;
+      if(ind + stride < size){
+         char h = compose(func[ind], func[ind+stride]);
+         func[ind+stride] = h;
       }
    }
 }
@@ -270,7 +270,7 @@ inline void parScanAdd(__global uint* data, uint size){
 
 __kernel void initFunc(__global char* S,
        __global char* specChars, __global uint S_length, 
-       __global uint* escape, __global char* function) {
+       __global char* escape, __global char* function) {
 
    uint global_addr = get_global_id(0);
    char input = S[global_addr];

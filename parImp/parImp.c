@@ -197,7 +197,7 @@ int main() {
                    input_length * sizeof(cl_uint), NULL, &err);
 
    escape_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY,
-                   input_length * sizeof(cl_uint), NULL, &err);
+                   input_length * sizeof(cl_char), NULL, &err);
 
    partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                     num_groups * sizeof(cl_uint), NULL, &err);
@@ -286,11 +286,12 @@ int main() {
     }
 
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
-   err |= clSetKernelArg(findSeparators, 1, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(findSeparators, 2, sizeof(cl_mem), &separator_buffer);
-   err |= clSetKernelArg(findSeparators, 3, sizeof(char), &specChars[0]);
-   err |= clSetKernelArg(findSeparators, 3, sizeof(cl_char), &firstCharacter);
-   err |= clSetKernelArg(findSeparators, 3, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(findSeparators, 1, sizeof(cl_uint), &input_length);
+   err |= clSetKernelArg(findSeparators, 2, sizeof(cl_mem), &input_buffer);
+   err |= clSetKernelArg(findSeparators, 3, sizeof(cl_mem), &separator_buffer);
+   err |= clSetKernelArg(findSeparators, 4, sizeof(char), specChars);
+   err |= clSetKernelArg(findSeparators, 5, sizeof(cl_char), &firstCharacter);
+   err |= clSetKernelArg(findSeparators, 6, sizeof(cl_mem), &output_buffer);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for parScanWithSubarrays");
       exit(1);
