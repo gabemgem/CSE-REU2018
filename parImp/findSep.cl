@@ -270,7 +270,7 @@ inline void parScanAdd(__global uint* data, uint size){
 
 __kernel void initFunc(__global char* S,
        __global char* specChars, __global uint S_length, 
-       __global uint* escape, __global char* function) {
+       __global char* escape, __global char* function) {
 
    uint global_addr = get_global_id(0);
    char input = S[global_addr];
