@@ -149,7 +149,11 @@ int main() {
    /* Data and buffers */
    char* input_string;
    cl_int input_length;
-   char specChars[4] = ",[]\\";
+   char* specChars = malloc(4*sizeof(char));
+   specChars[0] = ",";
+   specChars[1] = "[";
+   specChars[2] = "]";
+   specChars[3] = "\\";
    size_t specChars_length = 4;
 
    
@@ -255,7 +259,7 @@ int main() {
       perror("Couldn't create a kernel argument for initFunction:input buffer");
       exit(1);
    }
-   err |= clSetKernelArg(initFunction, 1, specChars_length*sizeof(char), &specChars);
+   err |= clSetKernelArg(initFunction, 1, 4*sizeof(char), &specChars);
    if(err != CL_SUCCESS) {
       perror("Couldn't create a kernel argument for initFunction:specChars");
       exit(1);
