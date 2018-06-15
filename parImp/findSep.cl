@@ -14,10 +14,10 @@ inline char compose(char f, char g) {
 }
 
 //sweepup stage of parallel scan
-inline void sweepup1(__local uint* x, int m) {
+inline void sweepup1(__local char* x, int m) {
    int lid = get_local_id(0);
    int ind1 = (lid*2)+1;//g function location
-   int depth = log2(m);
+   int depth = log2((float)m);
    for(int d=0; d<depth; ++d) {
       barrier(CLK_LOCAL_MEM_FENCE);//sync work items
       int mask = (0x1 << d) - 1;
@@ -31,10 +31,10 @@ inline void sweepup1(__local uint* x, int m) {
 }
 
 //sweepdown stage of parallel scan
-inline void sweepdown1(__local uint* x, int m) {
+inline void sweepdown1(__local char* x, int m) {
    int lid = get_local_id(0);
    int ind1 = (lid*2)+1;//g function location
-   int depth = log2(m);
+   int depth = log2((float)m);
    for(int d=depth-1; d>-1; --d) {
       barrier(CLK_LOCAL_MEM_FENCE);//sync work items
       int mask = (0x1 << d) - 1;
