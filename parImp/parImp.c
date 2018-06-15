@@ -231,9 +231,9 @@ int main() {
    };
 
    parScanFunctionWithSubarrays = clCreateKernel(program, 
-                                  "parScanComposeWithSubarrays", &err);
+                                  "parScanComposeFromSubarrays", &err);
    if(err != CL_SUCCESS) {
-      perror("Couldn't create parScanComposeWithSubarrays kernel");
+      perror("Couldn't create parScanComposeFromSubarrays kernel");
       exit(1);
    };
 
