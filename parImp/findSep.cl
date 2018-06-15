@@ -274,10 +274,13 @@ __kernel void initFunc(__global char* S,
 
    uint global_addr = get_global_id(0);
    char input = S[global_addr];
+   char OPEN = specChars[1];
+   char CLOSE = specChars[2];
+   char ESC = specChars[3];
    
-   char open = (input==specChars[1]);
-   char close = (input==specChars[2]);
-   escape[global_addr] = (input==specChars[3]);
+   char open = (input==OPEN);
+   char close = (input==CLOSE);
+   escape[global_addr] = (input==ESC);
    
    function[global_addr] = 0;
    function[global_addr] |= open;
