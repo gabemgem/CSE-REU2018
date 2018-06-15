@@ -378,6 +378,7 @@ int main() {
    /* Deallocate resources */
    free(input_string);
    free(input_length);
+   free(specChars);
    //free(local_array);
    free(finalResults);
 
