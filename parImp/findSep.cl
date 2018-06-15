@@ -285,7 +285,7 @@ __kernel void initFunc(__global char* S, uint S_length,
    char open = (input==OPEN);
    char close = (input==CLOSE);
    escape[global_addr] = (input==ESC);
-   
+   barrier(CLK_GLOBAL_MEM_FENCE);
    function[global_addr] = 0;
    function[global_addr] |= open;
    function[global_addr] |= (!close || escape[global_addr-1] || open) << 1;
