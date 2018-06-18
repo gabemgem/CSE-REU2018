@@ -229,7 +229,7 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
    for(uint d=0; d<depth; ++d){
       barrier(CLK_GLOBAL_MEM_FENCE);
       int mask = (0x1 << d) - 1;
-      if((gid & mask) == mask) {
+      if(((gid & mask) == mask) && (ind1 < size)) {
          uint offset = 0x1 << d;
          uint ind0 = ind1 - offset;
          char h = compose(func[ind0], func[ind1]);
