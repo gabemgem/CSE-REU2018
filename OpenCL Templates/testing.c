@@ -1,4 +1,4 @@
-#define PROGRAM_FILE "sample_kernel.cl"
+#define PROGRAM_FILE "testing_kernel.cl"
 #define KERNEL_FUNC "add_numbers"
 #define INPUT_SIZE 8//Use if input size is already known
 
@@ -105,6 +105,7 @@ int main() {
 
    output_buffer;
    cl_int num_groups;
+   cl_uint* sum = malloc(8*sizeof(cl_uint));
 
    /* Initialize data if just testing*/
    /*for(i=0; i<INPUT_SIZE; i++) {
@@ -128,11 +129,9 @@ int main() {
    num_groups = global_size/local_size;//NUM BLOCKS
    
    /* CHANGE "sizeof" TO INPUT DATA TYPE */
-   input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-         CL_MEM_COPY_HOST_PTR, INPUT_SIZE * sizeof(DATA_TYPE), data, &err);
    
-   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-         CL_MEM_COPY_HOST_PTR, num_groups * sizeof(DATA_TYPE), sum, &err);
+   output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
+      8 * sizeof(cl_uint), NULL, &err);
    if(err < 0) {
       perror("Couldn't create a buffer");
       exit(1);   
@@ -154,9 +153,7 @@ int main() {
 
    /* Create kernel arguments */
    /* Change according to your kernel */
-   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(kernel, 1, local_size * sizeof(float), NULL);
-   err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &output_buffer);
    if(err < 0) {
       perror("Couldn't create a kernel argument");
       exit(1);
@@ -178,6 +175,10 @@ int main() {
       exit(1);
    }
 
+   for(i=0; i<8; ++i) {
+      printf("%d\n", sum[i]);
+   }
+
    /* Check result if using testing data*/
    /*total = 0.0f;
    for(j=0; j<num_groups; j++) {
@@ -192,6 +193,7 @@ int main() {
 	*/
    
    /* Deallocate resources */
+   free(sum);
    clReleaseKernel(kernel);
    clReleaseMemObject(output_buffer);
    clReleaseMemObject(input_buffer);
