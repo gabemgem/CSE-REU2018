@@ -250,26 +250,28 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
 
 inline void parScanAdd(__global uint* data, uint size){
    uint gid = get_global_id(0);
-   uint ind1 = (gid*2)+1;
-   uint depth = log2((float)size);
-   
-   //scan step
-   for(uint d=0; d<depth; ++d){
-      barrier(CLK_GLOBAL_MEM_FENCE);
-      int mask = (0x1 << d) - 1;
-      if(((gid & mask) == mask) && (ind1 < size)) {
-         uint offset = 0x1 << d;
-         uint ind0 = ind1 - offset;
-         data[ind1] += data[ind0];
+   if(gid<size/2) {
+      uint ind1 = (gid*2)+1;
+      uint depth = log2((float)size);
+      
+      //scan step
+      for(uint d=0; d<depth; ++d){
+         barrier(CLK_GLOBAL_MEM_FENCE);
+         int mask = (0x1 << d) - 1;
+         if(((gid & mask) == mask) && (ind1 < size)) {
+            uint offset = 0x1 << d;
+            uint ind0 = ind1 - offset;
+            data[ind1] += data[ind0];
+         }
       }
-   }
 
-   //post scan inclusive step
-   for(uint stride = size/4; stride > 0; stride /= 2){
-      barrier(CLK_GLOBAL_MEM_FENCE);
-      uint ind = 2*stride*(gid + 1) - 1;
-      if(ind + stride < size){
-         data[ind + stride] += data[ind];
+      //post scan inclusive step
+      for(uint stride = size/4; stride > 0; stride /= 2){
+         barrier(CLK_GLOBAL_MEM_FENCE);
+         uint ind = 2*stride*(gid + 1) - 1;
+         if(ind + stride < size){
+            data[ind + stride] += data[ind];
+         }
       }
    }
 }
@@ -300,11 +302,11 @@ __kernel void findSep(__global char* function, uint size,
    //determine if char at gid is a valid separator
    separator[gid] = (S[gid] == SEP) && !(function[gid] & 1<<firstCharacter);
    //perform a parallel scan - add on the array of valid separators
-   final_results[gid] = separator[gid];
-   /*
+   
+   
    parScanAdd(separator, size);
    uint scanResult = separator[gid];
-
+   final_results[gid] = separator[gid];
    /*
    //store locations in final result array
    if(((gid==0) && (S[gid]==SEP)) || ((gid!=0) && (scanResult != separator[gid-1]))) {
