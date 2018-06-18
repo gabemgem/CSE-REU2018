@@ -419,6 +419,7 @@ int main(int argc, char** argv) {
     err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
     error_handler(err, "Couldn't create a kernel argument for parScanComposeFuncInc");
 
+   printf("%d\n", input_length);
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_uint), &input_length);
    err |= clSetKernelArg(findSeparators, 2, sizeof(cl_mem), &input_buffer);

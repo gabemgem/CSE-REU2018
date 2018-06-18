@@ -300,13 +300,16 @@ __kernel void findSep(__global char* function, uint size,
    //determine if char at gid is a valid separator
    separator[gid] = (S[gid] == SEP) && !(function[gid] & 1<<firstCharacter);
    //perform a parallel scan - add on the array of valid separators
-   
+   final_results[gid] = separator[gid];
+   /*
    parScanAdd(separator, size);
    uint scanResult = separator[gid];
 
+   /*
    //store locations in final result array
    if(((gid==0) && (S[gid]==SEP)) || ((gid!=0) && (scanResult != separator[gid-1]))) {
       final_results[scanResult-1] = gid;
    }
+   */
 
 }
