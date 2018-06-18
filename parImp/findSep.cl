@@ -292,7 +292,7 @@ __kernel void initFunc(__global char* S, uint S_length,
 }
 
 /* kernel to find the separators in S using the calculated functions */
-__kernel void findSep(__global uint* function, uint size,
+__kernel void findSep(__global char* function, uint size,
       __global char* S, __global uint* separator,
        char firstCharacter, __global uint* final_results) {
    //global identifier
