@@ -329,22 +329,20 @@ int main() {
 
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
-
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                      input_length * sizeof(cl_char), NULL, &err);
-
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
                    input_length * sizeof(cl_uint), NULL, &err);
-
    escape_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                    input_length * sizeof(cl_char), NULL, &err);
-
    partial_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                     num_groups * sizeof(cl_uint), NULL, &err);
-
    separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                       input_length * sizeof(cl_uint), NULL, &err);
    error_handler(err, "Couldn't create buffers");
+
+   
+
 
    /* Create a command queue */
    queue = clCreateCommandQueue(context, device, 0, &err);
