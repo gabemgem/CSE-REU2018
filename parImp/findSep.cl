@@ -257,7 +257,7 @@ inline void parScanAdd(__global uint* data, uint size){
    for(uint d=0; d<depth; ++d){
       barrier(CLK_GLOBAL_MEM_FENCE);
       int mask = (0x1 << d) - 1;
-      if((gid & mask) == mask) {
+      if(((gid & mask) == mask) && (ind1 < size)) {
          uint offset = 0x1 << d;
          uint ind0 = ind1 - offset;
          data[ind1] += data[ind0];
@@ -267,9 +267,9 @@ inline void parScanAdd(__global uint* data, uint size){
    //post scan inclusive step
    for(uint stride = size/4; stride > 0; stride /= 2){
       barrier(CLK_GLOBAL_MEM_FENCE);
-      uint ind1 = 2*stride*(gid + 1) - 1;
-      if(ind1 + stride < size){
-         data[ind1 + stride] += data[ind1];
+      uint ind = 2*stride*(gid + 1) - 1;
+      if(ind + stride < size){
+         data[ind + stride] += data[ind];
       }
    }
 }
