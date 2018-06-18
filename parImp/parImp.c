@@ -258,6 +258,24 @@ void read_from_file(char* line, cl_int* len) {
 
 }
 
+void read_from_file2(char* line, cl_int len) {
+   FILE *fp;
+
+   fp = fopen(INPUT_FILE, "r");
+   if(!fp) {
+      printf("Couldn't open input file");
+      exit(1);
+   }
+
+   if(fgets(line, len, fp) == NULL) {
+      printf("Couldn't read input file");
+      exit(1);
+   }
+
+   fclose(fp);
+
+}
+
 /* Padding string w/ spaces to a length of next power of 2.
    Stores padded string and new length in parameters.
 */
@@ -277,8 +295,13 @@ void pad_string(char** str, cl_int* len){
    *len = new_len;
 }
 
-int main() {
+int main(int argc, char** argv) {
 
+   if(argc!=2) {
+      perror("Incorrect number of arguments");
+      perror("Pass in string length");
+      exit(1);
+   }
    /* OpenCL structures */
    cl_device_id device;
    cl_context context;
@@ -292,12 +315,12 @@ int main() {
    cl_int err;
 
    /* Data and buffers */
-   char* input_string;
-   cl_int input_length;
+   cl_int input_length = atoi(argv[1]);
+   char* input_string = malloc(input_length * sizeof(char));
 
 
    /* Get data from file */
-   read_from_file(input_string, &input_length);
+   read_from_file2(input_string, input_length);
    
    //pads string to length of next power of 2 with spaces
    pad_string(&input_string, &input_length);
@@ -341,7 +364,7 @@ int main() {
                       input_length * sizeof(cl_uint), NULL, &err);
    error_handler(err, "Couldn't create buffers");
 
-   
+
 
 
    /* Create a command queue */
