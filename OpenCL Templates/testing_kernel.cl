@@ -27,7 +27,7 @@ inline void parScanAdd(__global uint* data, uint size){
 }
 
 __kernel void add_numbers(__global uint* group_result) {
-
-   group_result = {1,2,3,4,5,6,7,8};
+   uint gid = get_global_id(0);
+   group_result[gid] = gid+1;
    parScanAdd(group_result, 8);
 }

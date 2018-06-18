@@ -103,7 +103,7 @@ int main() {
    cl_int i, j, err;
    size_t local_size, global_size;
 
-   output_buffer;
+   cl_mem output_buffer;
    cl_int num_groups;
    cl_uint* sum = malloc(8*sizeof(cl_uint));
 
@@ -169,7 +169,7 @@ int main() {
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0, 
-         sizeof(sum), sum, 0, NULL, NULL);
+         8*sizeof(cl_uint), sum, 0, NULL, NULL);
    if(err < 0) {
       perror("Couldn't read the buffer");
       exit(1);
@@ -179,24 +179,11 @@ int main() {
       printf("%d\n", sum[i]);
    }
 
-   /* Check result if using testing data*/
-   /*total = 0.0f;
-   for(j=0; j<num_groups; j++) {
-      total += sum[j];
-   }
-   actual_sum = 1.0f * INPUT_SIZE/2*(INPUT_SIZE-1);
-   printf("Computed sum = %.1f.\n", total);
-   if(fabs(total - actual_sum) > 0.01*fabs(actual_sum))
-      printf("Check failed.\n");
-   else
-      printf("Check passed.\n");
-	*/
    
    /* Deallocate resources */
    free(sum);
    clReleaseKernel(kernel);
    clReleaseMemObject(output_buffer);
-   clReleaseMemObject(input_buffer);
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseContext(context);
