@@ -305,12 +305,11 @@ __kernel void findSep(__global char* function, uint size,
    
    
    parScanAdd(separator, size);
-   uint scanResult = separator[gid];
-   final_results[gid] = separator[gid];
+   //final_results[gid] = separator[gid];
    /*
    //store locations in final result array
-   if(((gid==0) && (S[gid]==SEP)) || ((gid!=0) && (scanResult != separator[gid-1]))) {
-      final_results[scanResult-1] = gid;
+   if(((gid==0) && (S[gid]==SEP)) || ((gid!=0) && (separator[gid] != separator[gid-1]))) {
+      final_results[separator[gid]-1] = gid;
    }
    */
 
