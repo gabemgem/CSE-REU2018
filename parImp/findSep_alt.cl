@@ -1,5 +1,3 @@
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-
 #define SEP ','
 #define OPEN '['
 #define CLOSE ']'
