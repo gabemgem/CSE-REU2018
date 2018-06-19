@@ -336,14 +336,14 @@ int main(int argc, char** argv) {
    program = build_program(context, device, PROGRAM_FILE);
 
    /* Create work group size */
-   size_t global_size = 128;//Total NUM THREADS
+   size_t global_size = 64;//Total NUM THREADS
    size_t local_size = 8;//NUM THREADS per BLOCK
    cl_int num_groups = global_size/local_size;//NUM BLOCKS
    
    /* Shared memory for parallel scan kernels */
    //cl_uint* local_array;
    /* Shared memory for findSep */
-   cl_char firstCharacter = (input_string[0] == SEP);
+   cl_char firstCharacter = (input_string[0] == OPEN);
    cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
    
    /* Create buffers */
@@ -459,7 +459,7 @@ int main(int argc, char** argv) {
    clFinish(queue);
 
    /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
+   err = clEnqueueReadBuffer(queue, separator_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
    error_handler(err, "Couldn't read the buffer");
 
