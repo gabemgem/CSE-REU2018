@@ -36,9 +36,9 @@ void scanOp(char* data, int len){
     for(int i=0; i < len; ++i){
       int ind1 = (i*2)+1;
       if(((i & mask) == mask) && (ind1 < len)){
-	int offset = 1 << d;
-	int ind0 = ind1 - offset;
-	data[ind1] = asso_func(data[ind0], data[ind1]);
+	   int offset = 1 << d;
+	   int ind0 = ind1 - offset;
+   	data[ind1] = asso_func(data[ind0], data[ind1]);
       }
     }
   }
@@ -48,7 +48,7 @@ void scanOp(char* data, int len){
     for(int i=0; i < len; ++i){
       int ind = (2*stride*(i + 1)) - 1;
       if(ind + stride < len){
-	data[ind + stride] = asso_func(data[ind], data[ind + stride]);
+	   data[ind + stride] = asso_func(data[ind], data[ind + stride]);
       }
     }
   }
@@ -60,16 +60,16 @@ char* init_function(char* str, char* escape, int len){
     char open = str[i] == OPEN,
       close = str[i] == CLOSE;
 
-    escape[i] = str[i] == ESC;
-    
-    func[i] = 0;
-    func[i] |= open;
-    if(i != 0){
-      func[i] |= ((!close) | escape[i-1]) << 1;
-    }
-    else{
-      func[i] |= (!close) << 1;
-    }
+      escape[i] = str[i] == ESC;
+      
+      func[i] = 0;
+      func[i] |= open;
+      if(i != 0){
+         func[i] |= ((!close) | escape[i-1]) << 1;
+      }
+      else{
+         func[i] |= (!close) << 1;
+      }
   }
 
   return func;
