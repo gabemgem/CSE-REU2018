@@ -1,6 +1,6 @@
 #define PROGRAM_FILE "testing_kernel.cl"
 #define KERNEL_FUNC "add_numbers"
-#define INPUT_SIZE 8//Use if input size is already known
+#define INPUT_SIZE 32//Use if input size is already known
 
 #include <math.h>
 #include <stdio.h>
@@ -105,7 +105,7 @@ int main() {
 
    cl_mem output_buffer;
    cl_int num_groups;
-   cl_uint* sum = malloc(8*sizeof(cl_uint));
+   cl_uint* sum = malloc(INPUT_SIZE*sizeof(cl_uint));
 
    /* Initialize data if just testing*/
    /*for(i=0; i<INPUT_SIZE; i++) {
@@ -124,14 +124,14 @@ int main() {
    program = build_program(context, device, PROGRAM_FILE);
 
    /* Create data buffer */
-   global_size = 8;//Total NUM THREADS
+   global_size = INPUT_SIZE;//Total NUM THREADS
    local_size = 4;//NUM THREADS per BLOCK
    num_groups = global_size/local_size;//NUM BLOCKS
    
    /* CHANGE "sizeof" TO INPUT DATA TYPE */
    
    output_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
-      8 * sizeof(cl_uint), NULL, &err);
+      INPUT_SIZE * sizeof(cl_uint), NULL, &err);
    if(err < 0) {
       perror("Couldn't create a buffer");
       exit(1);   
@@ -169,15 +169,16 @@ int main() {
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0, 
-         8*sizeof(cl_uint), sum, 0, NULL, NULL);
+         INPUT_SIZE*sizeof(cl_uint), sum, 0, NULL, NULL);
    if(err < 0) {
       perror("Couldn't read the buffer");
       exit(1);
    }
 
-   for(i=0; i<8; ++i) {
-      printf("%d\n", sum[i]);
+   for(i=0; i<INPUT_SIZE; ++i) {
+      printf("%d, ", sum[i]);
    }
+   printf("\n");
 
    
    /* Deallocate resources */
