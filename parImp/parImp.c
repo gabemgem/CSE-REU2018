@@ -240,7 +240,7 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    return program;
 }
 
-void read_from_file(char* line, cl_int len) {
+cl_uint read_from_file(char* line, cl_int len) {
    FILE *fp;
 
    fp = fopen(INPUT_FILE, "r");
@@ -249,12 +249,35 @@ void read_from_file(char* line, cl_int len) {
       exit(1);
    }
 
-   if(fgets(line, len, fp) == NULL) {
+   cl_uint counter=0, size=len;
+   line = malloc(size*sizeof(char));
+   cl_char c;
+   while((c = fgetc(fp)) != '\n') {
+      if(feof(fp)) {
+         break;
+      }
+      line[counter] = c;
+      counter++;
+      if(counter==size) {
+         size*=2;
+         line = (char*)realloc(line, size * sizeof(cl_char));
+      }
+
+   }
+   line = (char*)realloc(line, counter * sizeof(cl_char));
+   fclose(fp);
+   for(int i = 0; i<counter; ++i) {
+      printf("%c", line[i]);
+   }
+   printf("\n%d\n", counter);
+   return counter;
+
+   /*if(fgets(line, len, fp) == NULL) {
       printf("Couldn't read input file");
       exit(1);
    }
 
-   fclose(fp);
+   fclose(fp);*/
 
 }
 
