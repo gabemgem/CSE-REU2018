@@ -97,3 +97,14 @@ __kernel void findSep(__global char* function, uint size,
    //determine if char at gid is a valid separator
    final_results[gid] = (S[gid] == SEP) && !(function[gid] & (1<<firstCharacter));
 }
+
+__kernel void compressResults(__global uint* final_results, 
+                              __global uint* locs) {
+   uint gid = get_global_id(0);
+   uint val = final_results[gid];
+   barrier(CLK_GLOBAL_MEM_FENCE);
+
+   if((gid==0 && val!=0) || (gid!=0 && val!=final_results[gid-1])) {
+      locs[val-1] = gid;
+   }
+}
