@@ -1,3 +1,5 @@
+ #pragma OPENCL EXTENSION  cl_khr_int64_base_atomics : enable
+
 #define SEP ','
 #define OPEN '['
 #define CLOSE ']'
@@ -18,14 +20,38 @@ inline char compose(char f, char g) {
    return h;
 }
 
-__kernel void parScanComposeFuncInc(__global char* func, uint size) {
+inline int glob_barr(volatile __global uint* c1, volatile __global uint* c2, uint cmp){
+   int out = 0;
+   if(atomic_inc(c1) != cmp){
+      while(atomic_add(c1, 0) != cmp){
+         ++out;
+      }
+   }
+   else{
+      *c2 = 0;
+   }
+   
+   if(atomic_inc(c2) != cmp){
+      while(atomic_add(c2, 0) != cmp){
+         ++out;
+      }
+   }
+   else{
+      *c1 = 0;
+   }
+
+   return out;
+}
+
+__kernel void parScanComposeFuncInc(__global char* func, uint size,
+       volatile __global uint* c1, volatile __global uint* c2) {
    uint gid = get_global_id(0);
    uint depth = log2((float)size);
    
    //scan step
    for(uint d=0; d<depth; ++d){
-      barrier(CLK_GLOBAL_MEM_FENCE);
-      
+      //barrier(CLK_GLOBAL_MEM_FENCE);
+
       int mask = (0x1 << d) - 1;
       char selected = ((gid & mask) == mask) && (gid < size/2);
       
@@ -35,11 +61,12 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
       
       char h = compose(func[ind0], func[ind1]);
       func[ind1] = (selected) ? h : func[ind1];
+      glob_barr(c1, c2, size-1);
    }
 
    //post scan inclusive step
    for(uint stride = size/4; stride > 0; stride /= 2){
-      barrier(CLK_GLOBAL_MEM_FENCE);
+      //barrier(CLK_GLOBAL_MEM_FENCE);
       
       uint ind = (2*stride*(gid + 1)) - 1;
       uint ind2 = ind + stride;
@@ -50,44 +77,57 @@ __kernel void parScanComposeFuncInc(__global char* func, uint size) {
 
       char h = compose(func[ind], func[ind2]);
       func[ind2] = (selected) ? h : func[ind2];
+      glob_barr(c1, c2, size-1);
    }
 }
 
-inline void parScanAdd(__global uint* data, uint size){
+inline void parScanAdd(__global uint* data, uint size,
+       volatile __global uint* c1, volatile __global uint* c2){
    uint gid = get_global_id(0);
-   if(gid<size/2) {
-      uint ind1 = (gid*2)+1;
-      uint depth = log2((float)size);
+   uint depth = log2((float)size);
+   
+   //scan step
+   for(uint d=0; d<depth; ++d){
+      //barrier(CLK_GLOBAL_MEM_FENCE);
+   
+      int mask = (0x1 << d) - 1;
+      char selected = ((gid & mask) == mask) && (gid < size/2);
       
-      //scan step
-      for(uint d=0; d<depth; ++d){
-         //glob_barrier(counter, size);
-         //barrier(CLK_GLOBAL_MEM_FENCE);
-         int mask = (0x1 << d) - 1;
-         if(((gid & mask) == mask) && (ind1 < size)) {
-            uint offset = 0x1 << d;
-            uint ind0 = ind1 - offset;
-            data[ind1] += data[ind0];
-         }
-      }
+      uint ind1 = (selected) ? (gid*2)+1 : 0;
+      uint offset = 0x1 << d;
+      uint ind0 = (selected) ? ind1 - offset : 0;
+      
+      char h = data[ind0] + data[ind1];
+      data[ind1] = (selected) ? h : data[ind1];
+      glob_barr(c1, c2, size-1);
+   }
 
-      //post scan inclusive step
-      for(uint stride = size/4; stride > 0; stride /= 2){
-         //glob_barrier(counter, size);
-         //barrier(CLK_GLOBAL_MEM_FENCE);
-         uint ind = 2*stride*(gid + 1) - 1;
-         if(ind + stride < size){
-            data[ind + stride] += data[ind];
-         }
-      }
+   //post scan inclusive step
+   for(uint stride = size/4; stride > 0; stride /= 2){
+      //barrier(CLK_GLOBAL_MEM_FENCE);
+   
+      uint ind = (2*stride*(gid + 1)) - 1;
+      uint ind2 = ind + stride;
+      char selected = ind2 < size;
+      
+      ind = (selected) ? ind : 0;
+      ind2 = (selected) ? ind2 : 0;
+
+      char h = data[ind] + data[ind2];
+      data[ind2] = (selected) ? h : data[ind2];
+      glob_barr(c1, c2, size-1);
    }
 }
 
 __kernel void initFunc(__global char* S, uint S_length, 
-       __global char* escape, __global char* function) {
+       __global char* escape, __global char* function,
+       volatile __global uint* c1, volatile __global uint* c2) {
 
    uint gid = get_global_id(0);
    char input = S[gid];
+
+   *c1 = 0;
+   *c2 = 0;
 
    char open = (input==OPEN);
    char close = (input==CLOSE);
@@ -109,7 +149,6 @@ __kernel void findSep(__global char* function, uint size,
    //perform a parallel scan - add on the array of valid separators
    
    //parScanAdd(separator, size);
-   //uint scanResult = separator[gid];
    
    final_results[gid] = separator[gid];
    

@@ -1,5 +1,5 @@
 #define INPUT_FILE "input.txt"
-#define PROGRAM_FILE "findSep.cl"
+#define PROGRAM_FILE "findSep_alt.cl"
 //#define INPUT_SIZE 64//Use if input size is already known
 #define _GNU_SOURCE
 #define SEP ','
@@ -350,6 +350,8 @@ int main(int argc, char** argv) {
    cl_mem input_buffer, function_buffer, output_buffer;
    cl_mem escape_buffer, partial_buffer, separator_buffer;
 
+   cl_mem counter1, counter2;
+
    input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
          CL_MEM_COPY_HOST_PTR, input_length * sizeof(char), input_string, &err);
    function_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
@@ -362,10 +364,11 @@ int main(int argc, char** argv) {
                     num_groups * sizeof(cl_uint), NULL, &err);
    separator_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                       input_length * sizeof(cl_uint), NULL, &err);
+
+   counter1 = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_uint), NULL, &err);
+   counter2 = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_uint), NULL, &err);
+
    error_handler(err, "Couldn't create buffers");
-
-
-
 
    /* Create a command queue */
    queue = clCreateCommandQueue(context, device, 0, &err);
@@ -375,12 +378,12 @@ int main(int argc, char** argv) {
    initFunction = clCreateKernel(program, "initFunc", &err);
    error_handler(err, "Couldn't create initFunc kernel");
 
-   parScanFunction = clCreateKernel(program, "parScanCompose", &err);
-   error_handler(err, "Couldn't create parScanCompose kernel");
+   // parScanFunction = clCreateKernel(program, "parScanCompose", &err);
+   // error_handler(err, "Couldn't create parScanCompose kernel");
 
-   parScanFunctionWithSubarrays = clCreateKernel(program, 
-                                  "parScanComposeFromSubarrays", &err);
-   error_handler(err, "Couldn't create parScanComposeFromSubarrays kernel");
+   // parScanFunctionWithSubarrays = clCreateKernel(program, 
+   //                                "parScanComposeFromSubarrays", &err);
+   // error_handler(err, "Couldn't create parScanComposeFromSubarrays kernel");
 
    parScanComposeFuncInc = clCreateKernel(program, "parScanComposeFuncInc", &err);
    error_handler(err, "Couldn't create parScanComposeFuncInc kernel");
@@ -390,16 +393,12 @@ int main(int argc, char** argv) {
 
    /* Create kernel arguments */
    err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
-   error_handler(err, "Couldn't create a kernel argument for initFunction:input buffer");
-
    err |= clSetKernelArg(initFunction, 1, sizeof(cl_int), &input_length);
-   error_handler(err, "Couldn't create a kernel argument for initFunction:input length");
-
    err |= clSetKernelArg(initFunction, 2, sizeof(cl_mem), &escape_buffer);
-   error_handler(err, "Couldn't create a kernel argument for initFunction:escape buffer");
-
    err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &function_buffer);
-   error_handler(err, "Couldn't create a kernel argument for initFunction:function buffer");
+   err |= clSetKernelArg(initFunction, 4, sizeof(cl_mem), &counter1);
+   err |= clSetKernelArg(initFunction, 5, sizeof(cl_mem), &counter2);
+   error_handler(err, "Couldn't create a kernel argument for initFunction");
 
    /*
    err = clSetKernelArg(parScanFunction, 0, sizeof(cl_mem), &function_buffer);
@@ -415,11 +414,12 @@ int main(int argc, char** argv) {
    error_handler(err, "Couldn't create a kernel argument for parScanWithSubarrays");
    */
 
-    err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
-    err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
-    error_handler(err, "Couldn't create a kernel argument for parScanComposeFuncInc");
+   err = clSetKernelArg(parScanComposeFuncInc, 0, sizeof(cl_mem), &function_buffer);
+   err |= clSetKernelArg(parScanComposeFuncInc, 1, sizeof(cl_uint), &input_length);
+   err |= clSetKernelArg(parScanComposeFuncInc, 2, sizeof(cl_mem), &counter1);
+   err |= clSetKernelArg(parScanComposeFuncInc, 3, sizeof(cl_mem), &counter2);
+   error_handler(err, "Couldn't create a kernel argument for parScanComposeFuncInc");
 
-   printf("%d\n", input_length);
    err = clSetKernelArg(findSeparators, 0, sizeof(cl_mem), &function_buffer);
    err |= clSetKernelArg(findSeparators, 1, sizeof(cl_uint), &input_length);
    err |= clSetKernelArg(findSeparators, 2, sizeof(cl_mem), &input_buffer);
@@ -434,6 +434,8 @@ int main(int argc, char** argv) {
          &local_size, 0, NULL, NULL); 
    error_handler(err, "Couldn't enqueue the initFunc kernel");
 
+   clFinish(queue);
+   printf("Finished init\n");
 
    /*
    err = clEnqueueNDRangeKernel(queue, parScanFunction, 1, NULL, &global_size, 
@@ -444,30 +446,32 @@ int main(int argc, char** argv) {
          &local_size, 0, NULL, NULL); 
    error_handler(err, "Couldn't enqueue the parScanWithSubarrays kernel");
    */
-
    
    err = clEnqueueNDRangeKernel(queue, parScanComposeFuncInc, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    error_handler(err, "Couldn't enqueue the parScanWithSubarrays");
    
+   clFinish(queue);
+   printf("Finished compose\n");
+
 
    err = clEnqueueNDRangeKernel(queue, findSeparators, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
    error_handler(err, "Couldn't enqueue the calcDel kernel");
 
-   /* To ensure that parsing is done before reading the result*/
    clFinish(queue);
+   printf("Finished separators\n");
 
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
    error_handler(err, "Couldn't read the buffer");
 
-   printf("[%d", finalResults[0]);
-   for(int i=1; i<input_length; ++i) {
-      printf(", %d", finalResults[i]);
+   printf("%s\n", input_string);
+   for(int i=0; i<input_length; ++i) {
+      printf("%d", finalResults[i]);
    }
-   printf("]\n");
+   printf("\n");
    
    /* Deallocate resources */
    free(input_string);
@@ -477,8 +481,8 @@ int main(int argc, char** argv) {
    clReleaseDevice(device);
 
    clReleaseKernel(initFunction);
-   clReleaseKernel(parScanFunction);
-   clReleaseKernel(parScanFunctionWithSubarrays);
+   // clReleaseKernel(parScanFunction);
+   // clReleaseKernel(parScanFunctionWithSubarrays);
    clReleaseKernel(parScanComposeFuncInc);
    clReleaseKernel(findSeparators);
 
@@ -488,6 +492,9 @@ int main(int argc, char** argv) {
    clReleaseMemObject(escape_buffer);
    clReleaseMemObject(partial_buffer);
    clReleaseMemObject(separator_buffer);
+
+   clReleaseMemObject(counter1);
+   clReleaseMemObject(counter2);
 
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
