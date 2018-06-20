@@ -304,6 +304,7 @@ int main(int argc, char** argv) {
    cl_kernel postScanIncStep;
    cl_kernel addPostScanIncStep;
    cl_kernel findSep;
+   cl_kernel compressRes;
    
    cl_command_queue queue;
    cl_int err;
@@ -331,7 +332,7 @@ int main(int argc, char** argv) {
    program = build_program(context, device, PROGRAM_FILE);
 
    /* Create work group size */
-   size_t global_size = 128;//Total NUM THREADS
+   size_t global_size = input_length;//Total NUM THREADS
    size_t local_size = 8;//NUM THREADS per BLOCK
    
    /* Shared memory for findSep */
@@ -476,15 +477,40 @@ int main(int argc, char** argv) {
    if(VERBOSE){
       printf("Finished add post scan step\n");
    }
-
+   clFinish(queue);
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
    error_handler(err, "Couldn't read the buffer");
 
+   cl_uint num = finalResults[input_length-1];
+   cl_mem compressedBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                   num * sizeof(cl_uint), NULL, &err);
+
+   compressRes = clCreateKernel(program, "compressResults", &err);
+   error_handler(err, "Couldn't create compressRes kernel");
+   
+   err = clSetKernelArg(compressRes, 0, sizeof(cl_mem), &output_buffer);
+   err |= clSetKernelArg(compressRes, 1, sizeof(cl_mem), &compressedBuffer);
+   error_handler(err, "Couldn't create a kernel argument for compressRes");
+   
+   err = clEnqueueNDRangeKernel(queue, compressRes, 1, NULL, &global_size, 
+         &local_size, 0, NULL, NULL); 
+      error_handler(err, "Couldn't enqueue the compressRes");
+   clFinish(queue);
+
+   cl_uint* compressedResults = malloc(num * sizeof(cl_uint));
+   err = clEnqueueReadBuffer(queue, compressedBuffer, CL_TRUE, 0,
+         num * sizeof(cl_uint), compressedResults, 0, NULL, NULL);
+   error_handler(err, "Couldn't read the compressed buffer");
+
    printf("%s\n", input_string);
    for(int i=0; i<input_length; ++i) {
       printf("%d", finalResults[i]);
+   }
+   printf("\n");
+   for(int i=0; i<num; ++i) {
+      printf("%d, ", compressedResults[i]);
    }
    printf("\n");
    
