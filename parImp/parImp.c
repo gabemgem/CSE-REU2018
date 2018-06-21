@@ -2,12 +2,10 @@
 
 #define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
-<<<<<<< HEAD
+
 #define NUM_LINES 2
 #define _GNU_SOURCE
-=======
-//#define INPUT_SIZE 64//Use if input size is already known
->>>>>>> 0b6675add2cb7f6ec813795a0b71e415ed99b6ad
+
 #define SEP ','
 #define OPEN '['
 #define CLOSE ']'
@@ -172,8 +170,7 @@ int main(int argc, char** argv) {
 
    cl_int err;
 
-   /* Data and buffers */
-<<<<<<< HEAD
+
    cl_int guess = 16;
    if(argc==2) {
       guess = atoi(argv[1]) + 1;
@@ -207,16 +204,7 @@ int main(int argc, char** argv) {
    }
 
    fclose(fp);
-=======
-   cl_int input_length = atoi(argv[1]);
-   char* input_string = malloc(input_length * sizeof(char));
 
-   /* Get data from file */
-   read_from_file(input_string, input_length + 1);
-   
-   /* Pads string to length of next power of 2 with spaces */
-   pad_string(&input_string, &input_length);
->>>>>>> 0b6675add2cb7f6ec813795a0b71e415ed99b6ad
 
    if(VERBOSE){
       printf("%d\n", input_length[0]);
@@ -253,36 +241,9 @@ int main(int argc, char** argv) {
    cl_kernel findSep = clCreateKernel(program, "findSep", &err);
    error_handler(err, "Couldn't create findSep kernel");
 
-<<<<<<< HEAD
    cl_kernel compressRes = clCreateKernel(program, "compressResults", &err);
    error_handler(err, "Couldn't create compressRes kernel");
-=======
-   compressRes = clCreateKernel(program, "compressResults", &err);
-   error_handler(err, "Couldn't create compressRes kernel");
 
-   // Setting up and running init function
-   err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
-   err |= clSetKernelArg(initFunction, 1, sizeof(cl_int), &input_length);
-   err |= clSetKernelArg(initFunction, 2, sizeof(cl_mem), &escape_buffer);
-   err |= clSetKernelArg(initFunction, 3, sizeof(cl_mem), &function_buffer);
-   error_handler(err, "Couldn't create a kernel argument for initFunction");
-   
-   err = clEnqueueNDRangeKernel(queue, initFunction, 1, NULL, &global_size, 
-      &local_size, 0, NULL, NULL); 
-   error_handler(err, "Couldn't enqueue the initFunc kernel");
-
-   clFinish(queue);
-   if(VERBOSE){
-      printf("Finished init\n");
-   }
-
-   cl_uint depth = lg(input_length), d;
-   for(d=0; d<depth; ++d){
-      err = clSetKernelArg(scanStep, 0, sizeof(cl_mem), &function_buffer);
-      err |= clSetKernelArg(scanStep, 1, sizeof(cl_uint), &input_length);
-      err |= clSetKernelArg(scanStep, 2, sizeof(cl_uint), &d);
-      error_handler(err, "Couldn't create a kernel argument for scanStep");
->>>>>>> 0b6675add2cb7f6ec813795a0b71e415ed99b6ad
 
    printf("%d\n", nlines);
    printf("%s\n", input_string[0]);
@@ -322,37 +283,13 @@ int main(int argc, char** argv) {
       
       err = clEnqueueNDRangeKernel(queue, initFunction, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
-<<<<<<< HEAD
       error_handler(err, "Couldn't enqueue the initFunc kernel");
 
       clFinish(queue);
       if(VERBOSE){
          printf("Finished init\n");
       }
-=======
-      error_handler(err, "Couldn't enqueue the scanStep");
-   }
-
-   if(VERBOSE){
-      printf("Finished scan step\n");
-   }
-
-   cl_uint stride;
-   for(stride = input_length/4; stride > 0; stride /= 2){
-      err = clSetKernelArg(postScanIncStep, 0, sizeof(cl_mem), &function_buffer);
-      err |= clSetKernelArg(postScanIncStep, 1, sizeof(cl_uint), &input_length);
-      err |= clSetKernelArg(postScanIncStep, 2, sizeof(cl_uint), &stride);
-      error_handler(err, "Couldn't create a kernel argument for postScanIncStep");
-
-      err = clEnqueueNDRangeKernel(queue, postScanIncStep, 1, NULL, &global_size, 
-         &local_size, 0, NULL, NULL); 
-      error_handler(err, "Couldn't enqueue the postScanIncStep");
-   }
    
-   if(VERBOSE){
-      printf("Finished post scan step\n");
-   }
->>>>>>> 0b6675add2cb7f6ec813795a0b71e415ed99b6ad
 
       cl_uint depth = lg(input_length[l]), d;
       for(d=0; d<depth; ++d){
@@ -401,14 +338,9 @@ int main(int argc, char** argv) {
             &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the findSep kernel");
 
-<<<<<<< HEAD
       clFinish(queue);
-=======
-      err = clEnqueueNDRangeKernel(queue, addScanStep, 1, NULL, &global_size, 
-         &local_size, 0, NULL, NULL); 
-      error_handler(err, "Couldn't enqueue the addScanStep");
-   }
->>>>>>> 0b6675add2cb7f6ec813795a0b71e415ed99b6ad
+
+      
 
       if(VERBOSE){
          printf("Finished separation\n");
@@ -427,7 +359,6 @@ int main(int argc, char** argv) {
          //clFinish(queue);
       }
 
-<<<<<<< HEAD
       if(VERBOSE){
          printf("Finished add scan step\n");
       }
@@ -493,61 +424,10 @@ int main(int argc, char** argv) {
       clReleaseMemObject(escape_buffer);
       clReleaseMemObject(compressedBuffer);
 
-=======
-      err = clEnqueueNDRangeKernel(queue, addPostScanIncStep, 1, NULL, &global_size, 
-         &local_size, 0, NULL, NULL); 
-      error_handler(err, "Couldn't enqueue the addPostScanIncStep");
    }
 
-   if(VERBOSE){
-      printf("Finished add post scan step\n");
-   }
 
-   /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
-         input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
-   error_handler(err, "Couldn't read the buffer");
-
-   if(VERBOSE){
-      printf("Output buffer read\n");
-   }
-
-   cl_uint num = finalResults[input_length-1];
-   cl_mem compressedBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                   num * sizeof(cl_uint), NULL, &err);
-
-   err = clSetKernelArg(compressRes, 0, sizeof(cl_mem), &output_buffer);
-   err |= clSetKernelArg(compressRes, 1, sizeof(cl_mem), &compressedBuffer);
-   error_handler(err, "Couldn't create a kernel argument for compressRes");
-
-   err = clEnqueueNDRangeKernel(queue, compressRes, 1, NULL, &global_size, 
-         &local_size, 0, NULL, NULL);
-   error_handler(err, "Couldn't enqueue the compressRes");
-
-   clFinish(queue);
-
-   if(VERBOSE){
-      printf("Output buffer compressed\n");
-   }
-
-   cl_uint* compressedResults = malloc(num * sizeof(cl_uint));
-   err = clEnqueueReadBuffer(queue, compressedBuffer, CL_TRUE, 0,
-         num * sizeof(cl_uint), compressedResults, 0, NULL, NULL);
-   error_handler(err, "Couldn't read the compressed buffer");
-
-   if(VERBOSE){
-      printf("Compression read\n");
-   }
-
-   printf("%s\n", input_string);
-   for(int i=0; i<input_length; ++i) {
-      printf("%d", finalResults[i]);
-   }
-   printf("\n");
-   for(int i=0; i<num; ++i) {
-      printf("%d, ", compressedResults[i]);
->>>>>>> 0b6675add2cb7f6ec813795a0b71e415ed99b6ad
-   }
+   
    
    /* Deallocate resources */
    for(int j = 0; j<NUM_LINES; ++j) {
