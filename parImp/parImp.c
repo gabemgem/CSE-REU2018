@@ -1,9 +1,8 @@
 #define VERBOSE 0
 
-#define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
 
-#define NUM_LINES 2
+
 #define _GNU_SOURCE
 
 #define SEP ','
@@ -167,20 +166,43 @@ cl_int pad_num(cl_int old) {
 
 int main(int argc, char** argv) {
 
-
+   if(argc%2!=1) {
+      printf("Invalid num of args\n");
+      printf("Args should be in pairs with 'Command' 'Value'\n");
+      printf("Valid commands are:\n");
+      printf("i (input file - default \"input.txt\")\n");
+      printf("l (number of lines - default 2)\n");
+      printf("g (guess at line length - default 16\n");
+      exit(1);
+   }
    cl_int err;
 
 
    cl_int guess = 16;
-   if(argc==2) {
-      guess = atoi(argv[1]) + 1;
-      guess = pad_num(guess);
+   cl_int nlines = 2;
+   char* INPUT_FILE = "input.txt";
+   for(int a = 1; a < argc; a+=2) {
+      if(*argv[a] == 'i') {
+         INPUT_FILE = argv[a+1];
+      }
+      else if(*argv[a] == 'l') {
+         nlines = atoi(argv[a+1]);
+      }
+      else if(*argv[a] == 'g') {
+         guess = atoi(argv[a+1]);
+         guess = pad_num(guess);
+      }
+      else {
+         printf("INVALID ARGUMENT:\n");
+         printf("%s\t%s\n", argv[a], argv[a+1]);
+      }
    }
-   cl_int* input_length = malloc(NUM_LINES * sizeof(cl_int));
-   char** input_string = malloc(NUM_LINES * sizeof(char*));
+   
+   cl_int* input_length = malloc(nlines * sizeof(cl_int));
+   char** input_string = malloc(nlines * sizeof(char*));
    char* eof = malloc(sizeof(char));
    *eof = 0;
-   cl_int nlines = NUM_LINES;
+   
 
 
 
@@ -191,7 +213,7 @@ int main(int argc, char** argv) {
    }
 
    /* Get data from file */
-   for(int i=0; i<NUM_LINES; ++i) {
+   for(int i=0; i<nlines; ++i) {
       input_string[i] = malloc(guess*sizeof(char));
       input_length[i] = read_from_file(fp, input_string[i], guess, eof);
       printf("%s\n", input_string[i]);
@@ -428,7 +450,7 @@ int main(int argc, char** argv) {
    }
    
    /* Deallocate resources */
-   for(int j = 0; j<NUM_LINES; ++j) {
+   for(int j = 0; j<nlines; ++j) {
       free(input_string[j]);
    }
    free(input_string);
