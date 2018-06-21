@@ -183,28 +183,12 @@ int main(int argc, char** argv) {
    cl_int nlines = NUM_LINES;
 
 
-<<<<<<< HEAD
-   /* Create work group size */
-   size_t global_size = 64;//Total NUM THREADS
-   size_t local_size = 8;//NUM THREADS per BLOCK
-   cl_int num_groups = global_size/local_size;//NUM BLOCKS
-   
-   /* Shared memory for parallel scan kernels */
-   //cl_uint* local_array;
-   /* Shared memory for findSep */
-   cl_char firstCharacter = (input_string[0] == OPEN);
-   cl_uint* finalResults = malloc(input_length * sizeof(cl_uint));
-   
-   /* Create buffers */
-   cl_mem input_buffer, function_buffer, output_buffer;
-   cl_mem escape_buffer, partial_buffer, separator_buffer;
-=======
+
    FILE* fp = fopen(INPUT_FILE, "r");
    if(!fp) {
       printf("Couldn't open input file");
       exit(1);
    }
->>>>>>> Staging
 
    /* Get data from file */
    for(int i=0; i<NUM_LINES; ++i) {
@@ -442,16 +426,6 @@ int main(int argc, char** argv) {
       clReleaseMemObject(compressedBuffer);
 
    }
-
-<<<<<<< HEAD
-   /* Read the kernel's output */
-   err = clEnqueueReadBuffer(queue, separator_buffer, CL_TRUE, 0,
-         input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
-   error_handler(err, "Couldn't read the buffer");
-=======
->>>>>>> Staging
-
-   
    
    /* Deallocate resources */
    for(int j = 0; j<NUM_LINES; ++j) {

@@ -95,23 +95,9 @@ __kernel void findSep(__global char* function, uint size,
    //global identifier
    uint gid = get_global_id(0);
    //determine if char at gid is a valid separator
-<<<<<<< HEAD
-   separator[gid] = (S[gid] == SEP) && !(function[gid] & 1<<firstCharacter);
-   //perform a parallel scan - add on the array of valid separators
-   
-   
-   parScanAdd(separator, size);
-   //final_results[gid] = separator[gid];
-   /*
-   //store locations in final result array
-   if(((gid==0) && (S[gid]==SEP)) || ((gid!=0) && (separator[gid] != separator[gid-1]))) {
-      final_results[separator[gid]-1] = gid;
-   }
-   */
-=======
+
    final_results[gid] = (S[gid] == SEP) && !(function[gid] & (1<<firstCharacter));
 }
->>>>>>> Staging
 
 __kernel void compressResults(__global uint* final_results, 
                               __global uint* locs) {
