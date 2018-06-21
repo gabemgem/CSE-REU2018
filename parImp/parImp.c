@@ -231,7 +231,6 @@ int main(int argc, char** argv) {
          &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the initFunc kernel");
 
-      clFinish(queue);
       if(VERBOSE){
          printf("Finished init\n");
       }
@@ -248,7 +247,7 @@ int main(int argc, char** argv) {
             &local_size, 0, NULL, NULL); 
          error_handler(err, "Couldn't enqueue the scanStep");
       
-         //clFinish(queue);
+
       }
 
       if(VERBOSE){
@@ -265,8 +264,7 @@ int main(int argc, char** argv) {
          err = clEnqueueNDRangeKernel(queue, postScanIncStep, 1, NULL, &global_size, 
             &local_size, 0, NULL, NULL); 
          error_handler(err, "Couldn't enqueue the postScanIncStep");
-      
-         //clFinish(queue);
+
       }
       
       if(VERBOSE){
@@ -284,7 +282,7 @@ int main(int argc, char** argv) {
             &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the findSep kernel");
 
-      clFinish(queue);
+
 
       
 
@@ -302,7 +300,7 @@ int main(int argc, char** argv) {
             &local_size, 0, NULL, NULL); 
          error_handler(err, "Couldn't enqueue the addScanStep");
       
-         //clFinish(queue);
+
       }
 
       if(VERBOSE){
@@ -319,7 +317,7 @@ int main(int argc, char** argv) {
             &local_size, 0, NULL, NULL); 
          error_handler(err, "Couldn't enqueue the addPostScanIncStep");
       
-         //clFinish(queue);
+
       }
       if(VERBOSE){
          printf("Finished add post scan step\n");
@@ -330,11 +328,6 @@ int main(int argc, char** argv) {
             input_length[l] * sizeof(cl_uint), finalResults, 0, NULL, NULL);
       error_handler(err, "Couldn't read the buffer");
 
-      
-      /*printf("%s\n", input_string[l]);
-      for(int i=0; i<input_length[l]; ++i) {
-         printf("%d", finalResults[i]);
-      }*/
 
       cl_uint num = finalResults[input_length[l]-1];
       cl_mem compressedBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
