@@ -21,6 +21,7 @@
 #endif
 
 #include "error_handler.h"
+#include "helper_functions.h"
 
 /* Find a GPU or CPU associated with the first available platform */
 cl_device_id create_device() {
@@ -91,78 +92,7 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    return program;
 }
 
-cl_uint read_from_file(FILE* fp, char* line, cl_int guess, char* eof) {
-   if(!fp) {
-      printf("Couldn't open input file");
-      exit(1);
-   }
 
-   cl_uint counter=0, size=guess;
-   cl_char c;
-   while((c = fgetc(fp)) != '\n') {
-      if(feof(fp)) {
-         eof[0]=1;
-         break;
-      }
-      line[counter] = c;
-      counter++;
-      if(counter==size) {
-         size*=2;
-         line = (char*)realloc(line, size * sizeof(cl_char));
-      }
-
-   }
-   if(counter<size) {
-      for(int i = counter; i < size; ++i) {
-         line[i] = ' ';
-      }
-   }
-   printf("%s\n", line);
-   
-   return size;
-
-}
-
-/* Padding string w/ spaces to a length of next power of 2.
-   Stores padded string and new length in parameters.
-*/
-void pad_string(char** str, cl_int* len){ 
-   //probably a faster implementation
-   cl_int new_len = 1;
-
-
-   while(*len > new_len){
-      if(*len==new_len) {
-         return;
-      }
-      new_len <<= 1;
-      
-   }
-
-   *str = (char *)realloc(*str, sizeof(char) * new_len);
-   
-   for(cl_int i=(*len); i<new_len; ++i){
-         (*str)[i] = ' ';
-   }
-   *len = new_len;
-}
-
-cl_uint lg(int val){
-   cl_uint out = 0;
-   while(val > 1){
-      val >>= 1;
-      ++out;
-   }
-   return out;
-}
-
-cl_int pad_num(cl_int old) {
-   cl_int new = 1;
-   while(old>new) {
-      new<<=1;
-   }
-   return new;
-}
 
 int main(int argc, char** argv) {
 
@@ -216,7 +146,6 @@ int main(int argc, char** argv) {
    for(int i=0; i<nlines; ++i) {
       input_string[i] = malloc(guess*sizeof(char));
       input_length[i] = read_from_file(fp, input_string[i], guess, eof);
-      printf("%s\n", input_string[i]);
       /* Pads string to length of next power of 2 with spaces */
       pad_string(&input_string[i], &input_length[i]);
       
@@ -267,12 +196,6 @@ int main(int argc, char** argv) {
    cl_kernel compressRes = clCreateKernel(program, "compressResults", &err);
    error_handler(err, "Couldn't create compressRes kernel");
 
-
-   printf("%d\n", nlines);
-   printf("%s\n", input_string[0]);
-   printf("%s\n", input_string[1]);
-   printf("%d\n", input_length[0]);
-   printf("%d\n", input_length[1]);
 
    for(int l = 0; l < nlines; ++l) {
       /* Create work group size */
@@ -408,13 +331,12 @@ int main(int argc, char** argv) {
       error_handler(err, "Couldn't read the buffer");
 
       
-      printf("%s\n", input_string[l]);
+      /*printf("%s\n", input_string[l]);
       for(int i=0; i<input_length[l]; ++i) {
          printf("%d", finalResults[i]);
-      }
+      }*/
 
       cl_uint num = finalResults[input_length[l]-1];
-      printf("\n%d\n", num);
       cl_mem compressedBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                       num * sizeof(cl_uint), NULL, &err);
 
@@ -433,7 +355,7 @@ int main(int argc, char** argv) {
             num * sizeof(cl_uint), compressedResults, 0, NULL, NULL);
       error_handler(err, "Couldn't read the compressed buffer");
 
-      printf("\n");
+      //printf("\n");
       for(int i=0; i<num; ++i) {
          printf("%d, ", compressedResults[i]);
       }
