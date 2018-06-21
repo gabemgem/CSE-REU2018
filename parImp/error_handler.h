@@ -1,3 +1,6 @@
+#ifndef ERR_HANDLER
+#define ERR_HANDLER
+
 #include <stdio.h>
 
 #ifdef MAC
@@ -7,13 +10,12 @@
 #endif
 
 void error_handler(cl_int err, char* message) {
+
    if(err == CL_SUCCESS)
       return;
    char* error_message = "";
    switch(err){
     // run-time and JIT compiler errors
-    case 0: error_message = "CL_SUCCESS";
-            break;
     case -1: error_message = "CL_DEVICE_NOT_FOUND";
             break;
     case -2: error_message = "CL_DEVICE_NOT_AVAILABLE";
@@ -155,3 +157,5 @@ void error_handler(cl_int err, char* message) {
    exit(1);
    
 }
+
+#endif /* error_handler.h */
