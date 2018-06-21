@@ -3,7 +3,6 @@
 #define INPUT_FILE "input.txt"
 #define PROGRAM_FILE "findSep.cl"
 //#define INPUT_SIZE 64//Use if input size is already known
-#define _GNU_SOURCE
 #define SEP ','
 #define OPEN '['
 #define CLOSE ']'
@@ -160,11 +159,11 @@ int main(int argc, char** argv) {
    cl_int err;
 
    /* Data and buffers */
-   cl_int input_length = atoi(argv[1]) + 1;
+   cl_int input_length = atoi(argv[1]);
    char* input_string = malloc(input_length * sizeof(char));
 
    /* Get data from file */
-   read_from_file(input_string, input_length);
+   read_from_file(input_string, input_length + 1);
    
    /* Pads string to length of next power of 2 with spaces */
    pad_string(&input_string, &input_length);
@@ -226,6 +225,9 @@ int main(int argc, char** argv) {
    findSep = clCreateKernel(program, "findSep", &err);
    error_handler(err, "Couldn't create findSep kernel");
 
+   compressRes = clCreateKernel(program, "compressResults", &err);
+   error_handler(err, "Couldn't create compressRes kernel");
+
    // Setting up and running init function
    err = clSetKernelArg(initFunction, 0, sizeof(cl_mem), &input_buffer);
    err |= clSetKernelArg(initFunction, 1, sizeof(cl_int), &input_length);
@@ -252,8 +254,6 @@ int main(int argc, char** argv) {
       err = clEnqueueNDRangeKernel(queue, scanStep, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the scanStep");
-   
-      //clFinish(queue);
    }
 
    if(VERBOSE){
@@ -270,8 +270,6 @@ int main(int argc, char** argv) {
       err = clEnqueueNDRangeKernel(queue, postScanIncStep, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the postScanIncStep");
-   
-      //clFinish(queue);
    }
    
    if(VERBOSE){
@@ -304,8 +302,6 @@ int main(int argc, char** argv) {
       err = clEnqueueNDRangeKernel(queue, addScanStep, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the addScanStep");
-   
-      //clFinish(queue);
    }
 
    if(VERBOSE){
@@ -321,38 +317,47 @@ int main(int argc, char** argv) {
       err = clEnqueueNDRangeKernel(queue, addPostScanIncStep, 1, NULL, &global_size, 
          &local_size, 0, NULL, NULL); 
       error_handler(err, "Couldn't enqueue the addPostScanIncStep");
-   
-      //clFinish(queue);
    }
+
    if(VERBOSE){
       printf("Finished add post scan step\n");
    }
-   clFinish(queue);
+
    /* Read the kernel's output */
    err = clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, 0,
          input_length * sizeof(cl_uint), finalResults, 0, NULL, NULL);
    error_handler(err, "Couldn't read the buffer");
 
+   if(VERBOSE){
+      printf("Output buffer read\n");
+   }
+
    cl_uint num = finalResults[input_length-1];
    cl_mem compressedBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
                    num * sizeof(cl_uint), NULL, &err);
 
-   compressRes = clCreateKernel(program, "compressResults", &err);
-   error_handler(err, "Couldn't create compressRes kernel");
-   
    err = clSetKernelArg(compressRes, 0, sizeof(cl_mem), &output_buffer);
    err |= clSetKernelArg(compressRes, 1, sizeof(cl_mem), &compressedBuffer);
    error_handler(err, "Couldn't create a kernel argument for compressRes");
-   
+
    err = clEnqueueNDRangeKernel(queue, compressRes, 1, NULL, &global_size, 
-         &local_size, 0, NULL, NULL); 
-      error_handler(err, "Couldn't enqueue the compressRes");
+         &local_size, 0, NULL, NULL);
+   error_handler(err, "Couldn't enqueue the compressRes");
+
    clFinish(queue);
+
+   if(VERBOSE){
+      printf("Output buffer compressed\n");
+   }
 
    cl_uint* compressedResults = malloc(num * sizeof(cl_uint));
    err = clEnqueueReadBuffer(queue, compressedBuffer, CL_TRUE, 0,
          num * sizeof(cl_uint), compressedResults, 0, NULL, NULL);
    error_handler(err, "Couldn't read the compressed buffer");
+
+   if(VERBOSE){
+      printf("Compression read\n");
+   }
 
    printf("%s\n", input_string);
    for(int i=0; i<input_length; ++i) {
@@ -383,5 +388,10 @@ int main(int argc, char** argv) {
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseContext(context);
+
+   if(VERBOSE){
+      printf("Resources deallocated\n");
+   }
+
    return 0;
 }
