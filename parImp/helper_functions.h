@@ -9,14 +9,21 @@
 #include <CL/cl.h>
 #endif
 
+cl_int pad_num(cl_int old) {
+   cl_int new = 1;
+   while(old>new) {
+      new<<=1;
+   }
+   return new;
+}
 
-cl_uint read_from_file(FILE* fp, char* line, cl_int guess, char* eof) {
+cl_uint read_from_file(FILE* fp, char* line, cl_int* guess, char* eof) {
    if(!fp) {
       printf("Couldn't open input file");
       exit(1);
    }
 
-   cl_uint counter=0, size=guess;
+   cl_uint counter=0, size=*guess;
    cl_char c;
    while((c = fgetc(fp)) != '\n') {
       if(feof(fp)) {
@@ -28,6 +35,10 @@ cl_uint read_from_file(FILE* fp, char* line, cl_int guess, char* eof) {
       if(counter==size) {
          size*=2;
          line = (char*)realloc(line, size * sizeof(cl_char));
+         if(line==NULL) {
+            perror("Couldn't realloc line");
+            exit(1);
+         }
       }
 
    }
@@ -36,6 +47,8 @@ cl_uint read_from_file(FILE* fp, char* line, cl_int guess, char* eof) {
          line[i] = ' ';
       }
    }
+   *guess = counter;
+   *guess = pad_num(*guess);
    
    return size;
 
@@ -74,13 +87,7 @@ cl_uint lg(int val){
    return out;
 }
 
-cl_int pad_num(cl_int old) {
-   cl_int new = 1;
-   while(old>new) {
-      new<<=1;
-   }
-   return new;
-}
+
 
 
 #endif /* helper_functions.h */
