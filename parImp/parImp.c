@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <omp.h>
 
 #ifdef MAC
 #include <OpenCL/cl.h>
@@ -106,6 +107,7 @@ int main(int argc, char** argv) {
       exit(1);
    }
    cl_int err;
+   double time1, time2;
 
 
    cl_int guess = 16;
@@ -135,7 +137,7 @@ int main(int argc, char** argv) {
    
 
 
-
+   time1 = omp_get_wtime();
    FILE* fp = fopen(INPUT_FILE, "r");
    if(!fp) {
       printf("Couldn't open input file");
@@ -145,7 +147,7 @@ int main(int argc, char** argv) {
    /* Get data from file */
    for(int i=0; i<nlines; ++i) {
       input_string[i] = malloc(guess*sizeof(char));
-      input_length[i] = read_from_file(fp, input_string[i], guess, eof);
+      input_length[i] = read_from_file(fp, input_string[i], &guess, eof);
       /* Pads string to length of next power of 2 with spaces */
       pad_string(&input_string[i], &input_length[i]);
       
@@ -156,8 +158,8 @@ int main(int argc, char** argv) {
    }
 
    fclose(fp);
-
-
+   time2 = omp_get_wtime();
+   printf("Time to get input: %f\n", time2 - time1);
    if(VERBOSE){
       printf("%d\n", input_length[0]);
    }
@@ -195,7 +197,8 @@ int main(int argc, char** argv) {
 
    cl_kernel compressRes = clCreateKernel(program, "compressResults", &err);
    error_handler(err, "Couldn't create compressRes kernel");
-
+   time1 = omp_get_wtime();
+   printf("Time to set up program: %f\n", time1 - time2);
 
    for(int l = 0; l < nlines; ++l) {
       /* Create work group size */
@@ -363,6 +366,8 @@ int main(int argc, char** argv) {
       clReleaseMemObject(compressedBuffer);
 
    }
+   time2 = omp_get_wtime();
+   printf("Time to process input: %f\n", time2 - time1);
    
    /* Deallocate resources */
    for(int j = 0; j<nlines; ++j) {
