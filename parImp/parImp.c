@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
    for(int l = 0; l < nlines; ++l) {
       /* Create work group size */
       size_t global_size = input_length[l];//Total NUM THREADS
-      size_t local_size = 8;//NUM THREADS per BLOCK
+      size_t local_size = 16;//NUM THREADS per BLOCK
       
       /* Shared memory for findSep */
       cl_char firstCharacter = (input_string[l][0] == SEP);
@@ -351,11 +351,12 @@ int main(int argc, char** argv) {
             num * sizeof(cl_uint), compressedResults, 0, NULL, NULL);
       error_handler(err, "Couldn't read the compressed buffer");
 
-      //printf("\n");
+      /*
       for(int i=0; i<num; ++i) {
          printf("%d, ", compressedResults[i]);
       }
       printf("\n");
+      */
 
       free(finalResults);
       free(compressedResults);
