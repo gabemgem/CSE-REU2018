@@ -1,4 +1,4 @@
-#define CL_HPP_ENABLE_EXCEPTIONS
+
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 
 #include <CL/cl2.hpp>
@@ -47,4 +47,30 @@ int main() {
 
 	Platform platform = getPlatform();
 	Device device = getDevice(platform, 2, true);
+
+	// Select the default platform and create a context using this platform and the GPU
+    cl_context_properties cps[3] = { 
+        CL_CONTEXT_PLATFORM, 
+        (cl_context_properties)(platform)(), 
+        0 
+    };
+    Context context( CL_DEVICE_TYPE_GPU, cps);
+
+
+    // Create a command queue and use the first device
+    CommandQueue queue = CommandQueue(context, device);
+
+    // Read source file
+    ifstream sourceFile("findSep.cl");
+    string sourceCode(
+        istreambuf_iterator<char>(sourceFile),
+        (istreambuf_iterator<char>()));
+    Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+
+    // Make program of the source code in the context
+    Program program = Program(context, source);
+
+    program.build(device);
+
+    Kernel initFunc(program, "initFunc");
 }
