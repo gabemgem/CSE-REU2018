@@ -22,18 +22,19 @@ cl_uint read_chunck(FILE * fp, char ** chunk, char ** residual, unsigned int len
    unsigned long start = ftell(fp);
    
    //copying chunk from file
-   while((c = fgetc(fp)) != EOF || count < CHUNK_SIZE){
+   while(count < CHUNK_SIZE){
+      
+      if((c = fgetc(fp)) == EOF){
+         *residual = NULL;
+         return count;
+      }
+
       *chunk = (char *)realloc(*chunk, (++count)*sizeof(cl_char));
       (*chunk)[count-1] = c;
    }
 
-   if(c == EOF){
-      *residual = NULL;
-      return count;
-   }
-
-   if((*chunk)[count-1] != '\n'){
-      //seeking the past '\n'
+   //seeking the past '\n'
+   if(c != '\n'){
       unsigned int end = count-1;
       while(c != '\n'){
          --end;
@@ -45,7 +46,7 @@ cl_uint read_chunck(FILE * fp, char ** chunk, char ** residual, unsigned int len
       
       //copying start of next line into residual
       *residual = (char *)malloc(sizeof(cl_char)*(res_size));
-      mempcpy(*residual, (*chunk) + chunk_size, res_size);
+      memcpy(*residual, (*chunk) + chunk_size, sizeof(cl_char)*(res_size));
 
       //Getting rid of incomplete line from chunk and throwing away '\n'
       *chunk = (char*)realloc(*chunk, sizeof(cl_char)*(chunk_size-1));
@@ -56,7 +57,6 @@ cl_uint read_chunck(FILE * fp, char ** chunk, char ** residual, unsigned int len
    //throwing away ending '\n'
    *chunk = (char*)realloc(*chunk, sizeof(cl_char)*(count-1));
    return count-1;
-
 }
 
 cl_uint read_from_file(FILE* fp, char* line, cl_int* guess, char* eof) {
