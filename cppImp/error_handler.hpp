@@ -2,12 +2,7 @@
 #define ERR_HANDLER
 
 #include <stdio.h>
-
-#ifdef MAC
-#include <OpenCL/cl.h>
-#else
-#include <CL/cl.h>
-#endif
+#include <CL/cl.hpp>
 
 void error_handler(cl_int err, char* message) {
 
