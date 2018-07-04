@@ -10,7 +10,7 @@ using namespace std;
 using namespace cl;
 
 Platform getPlatform() {
-	vector<Platform> all_platforms;
+	std::vector<Platform> all_platforms;
 	Platform::get(&all_platforms);
 
 	if(all_platforms.size()==0) {
@@ -18,7 +18,7 @@ Platform getPlatform() {
 		exit(1);
 	}
 	Platform plat;
-	for(auto &p : platforms) {
+	for(auto &p : all_platforms) {
 		string platver = p.getInfo<CL_PLATFORM_VERSION>();
 		if(platver.find("OpenCL 1.2") != string::npos) {
 			plat = p;
@@ -28,7 +28,7 @@ Platform getPlatform() {
 }
 
 Device getDevice(Platform platform, int i, bool display=false) {
-	vector<Device> all_devices;
+	std::vector<Device> all_devices;
 	platform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
 	if(all_devices.size()==0) {
 		cout << "No devices found.\n";
