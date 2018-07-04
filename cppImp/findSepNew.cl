@@ -67,5 +67,13 @@ __kernel void findSep(
 			prev_separators = separators[lid];
 		}
 
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if(lid+i<llength) {
+			finalResults[gid+1] = separators[lid];
+		}
+
+
+
 	}
 }
