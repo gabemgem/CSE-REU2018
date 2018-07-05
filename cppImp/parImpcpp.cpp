@@ -3,6 +3,7 @@
 
 #include <CL/cl2.hpp>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
 
@@ -36,8 +37,9 @@ Device getDevice(Platform platform, int i, bool display=false) {
 	}
 
 	if(display) {
-		for(int j=0; j<all_devices.size(); ++j)
-			printf("Device %d: %s\n", j, all_devices[j].getInfo<CL_DEVICE_NAME>().c_str());
+		for(auto &d : all_devices){
+			cout << "Device " << j << ": " << d.getInfo<CL_DEVICE_NAME>() << endl;
+      }
 	}
 
 	return all_devices[i];
@@ -46,31 +48,33 @@ Device getDevice(Platform platform, int i, bool display=false) {
 int main() {
 
 	Platform platform = getPlatform();
-	Device device = getDevice(platform, 2, true);
+	Device device = getDevice(platform, 2);
 
 	// Select the default platform and create a context using this platform and the GPU
-    cl_context_properties cps[3] = { 
-        CL_CONTEXT_PLATFORM, 
-        (cl_context_properties)(platform)(), 
-        0 
-    };
-    Context context( CL_DEVICE_TYPE_GPU, cps);
+   cl_context_properties cps[3] = { 
+      CL_CONTEXT_PLATFORM, 
+      (cl_context_properties)(platform)(), 
+      0 
+   };
+   Context context( CL_DEVICE_TYPE_GPU, cps);
 
 
-    // Create a command queue and use the first device
-    CommandQueue queue = CommandQueue(context, device);
+   // Create a command queue and use the first device
+   CommandQueue queue = CommandQueue(context, device);
 
-    // Read source file
-    ifstream sourceFile("findSep.cl");
-    string sourceCode(
-        istreambuf_iterator<char>(sourceFile),
-        (istreambuf_iterator<char>()));
-    Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+   // Read source file
+   std::ifstream sourceFile("findSep.cl");
+   std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (istreambuf_iterator<char>()));
 
-    // Make program of the source code in the context
-    Program program = Program(context, source);
+   Program::Sources sources;
 
-    program.build(device);
+   sources.push_back({sourceCode.c_str(), sourceCode.length()+1});
 
-    Kernel initFunc(program, "initFunc");
+   // Make program of the source code in the context
+   Program program = Program(context, sources);
+
+   //Needs to be vector of devices
+   program.build(device);
+
+   Kernel initFunc(program, "initFunc");
 }
