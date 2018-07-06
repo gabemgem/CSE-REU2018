@@ -20,28 +20,26 @@ __kernel void newLine(__global char * input, __global uint * output){
    output[gid] = input[gid] == NEWLINE;
 }
 
-inline void initFunction()
-
-
 /* NOTE: It may be slightly more efficient to use atomic function to 
    select the first PE to respond to do single-person tasks
    (ex: setting position and saving previous values) */
 __kernel void findSep(
-	__global char* input_string,     //char array with the input
-	__global uint* pos,              //uint array of start/end position pairs for each line
-   __global uint lines,             //number of lines in input_string
-   __global uint* pos_ptr,          //points to a position pair in pos
-   __local uint length,             //length of current line
-   __local uint* isWorking,         //denotes when work is being done on a current line
-   __local uint curr_pos,           //holds copy of the current line pointer for work group
-	__local char* lstring,           //char array to hold the local string
-	__local char* escape,            //array to hold locations of escape characters
-   __local prev_escape,
-	__local char* function,          //array to calculate the function
-   __local char* elems_scanned,     //tracks the number if elements scanned
-   __local char first_char          //denotes first character of a line is delimited
-	__local uint* separators         //array for valid separators
-	__global uint* finalResults      //array to hold final scan results
+   __global char* input_string,  //char array with the input
+   __global uint* pos,           //uint array of start/end position pairs for each line
+   __global uint lines,          //number of lines in input_string
+   __global uint* pos_ptr,       //points to a position pair in pos
+   __local uint length,          //length of current line
+   __local uint curr_pos,        //holds copy of the current line pointer for work group
+   __local char* lstring,        //char array to hold the local string
+   __local char* escape,         //array to hold locations of escape characters
+   __local prev_escape,          //holds the escape value of the last element in for previous buffer
+   __local prev_function,        //holds the function value of the last element in for previous buffer
+   __local prev_val,             //holds the separator value of the last element in for previous buffer
+   __local char* function,       //array to calculate the function
+   __local char elems_scanned,   //tracks the number if elements scanned
+   __local char first_char,      //denotes first character of a line is delimited
+   __local uint* separators,     //array for valid separators
+   __global uint* finalResults   //array to hold final scan results
 	) {
    
    uint gid = get_global_id(0), lid = get_local_id(0);
@@ -52,9 +50,9 @@ __kernel void findSep(
       
       //setting up for new line
       if(lid == 0){
-         curr_pos = atomic_inc(pos_ptr);
-         length = curr_pos[1] - curr_pos[0];
-         first_char = (input_string[curr_pos] == OPEN);
+         curr_pos = atomic_inc(pos_ptr) * 2;
+         length = pos[curr_pos + 1] - pos[curr_pos];
+         first_char = (input_string[pos[curr_pos]] == OPEN);
       }
       barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -101,9 +99,6 @@ __kernel void findSep(
          barrier(CLK_LOCAL_MEM_FENCE);
       }
 
-      //resetting for next line
-      atomic_dec(isWorking);
-      barrier(CLK_LOCAL_MEM_FENCE);
    }
 
 }
