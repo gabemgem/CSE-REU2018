@@ -22,99 +22,88 @@ __kernel void newLine(__global char * input, __global uint * output){
 
 inline void initFunction()
 
+
+/* NOTE: It may be slightly more efficient to use atomic function to 
+   select the first PE to respond to do single-person tasks
+   (ex: setting position and saving previous values) */
 __kernel void findSep(
 	__global char* input_string,     //char array with the input
 	__global uint* pos,              //uint array of start/end position pairs for each line
    __global uint lines,             //number of lines in input_string
    __global uint* pos_ptr,          //points to a position pair in pos
-   __local uint* isWorking          //denotes when work is being done on a current line
-   __local uint* curr_pos,          //holds copy of the current line pointer for work group
+   __local uint length,             //length of current line
+   __local uint* isWorking,         //denotes when work is being done on a current line
+   __local uint curr_pos,           //holds copy of the current line pointer for work group
 	__local char* lstring,           //char array to hold the local string
 	__local char* escape,            //array to hold locations of escape characters
+   __local prev_escape,
 	__local char* function,          //array to calculate the function
    __local char* elems_scanned,     //tracks the number if elements scanned
-   __local char* first_character    //first character of a line
+   __local char first_char          //denotes first character of a line is delimited
 	__local uint* separators         //array for valid separators
 	__global uint* finalResults      //array to hold final scan results
 	) {
    
+   uint gid = get_global_id(0), lid = get_local_id(0);
+   uint gw_size = get_global_size(0), wg_size = get_local_size(0);
+
    //compute until all lines are exhausted
    while(atomic_add(pos_ptr, 0) < lines){
       
-      //setting position pointer
-      if(!atomic_inc(isWorking)){
-         *curr_pos = atomic_inc(pos_ptr);
+      //setting up for new line
+      if(lid == 0){
+         curr_pos = atomic_inc(pos_ptr);
+         length = curr_pos[1] - curr_pos[0];
+         first_char = (input_string[curr_pos] == OPEN);
       }
       barrier(CLK_LOCAL_MEM_FENCE);
 
-      
+      while(elems_scanned < length){
 
+         //copy elements of input string from global memory to local and set function
+         uint index = curr_pos + elems_scanned + lid;
+         lstring[lid] = (index < length) ? input_string[index] : ' ';
+         barrier(CLK_LOCAL_MEM_FENCE);
 
+         //initialize function for characters in buffer
+         char open = (lstring[lid] == OPEN);
+         char close = (lstring[lid] == CLOSE);
+         escape[lid] = (lstring[lid] == ESC);
+
+         function[lid] = open;
+         function[lid] |= (lid != 0) ? ((!close) || escape[lid-1]) << 1 : 
+                                       ((!close) || prev_escape) << 1;
+         barrier(CLK_LOCAL_MEM_FENCE);
+
+         //parallel compose over function elements
+         parScanCompose(function, wgsize);
+         function[lid] = compose(last_function, function[lid]);
+         
+         //initialize separators for characters in buffer
+         separators[lid] = (first_char) ? (function & 2) >> 1) :
+                                          (function & 1);
+         barrier(CLK_LOCAL_MEM_FENCE);
+
+         //parallel add over separator elements
+         parScanAdd(separators, wgsize);
+         separators[lid] += prev_val;
+
+         //save result of last element
+         if(lid == wg_size - 1) {
+			   prev_escape = escape[lid];
+			   prev_function = function[lid];
+			   prev_val = separators[lid];
+		   }
+
+         //increase elems_scanned by the work group size
+         elems_scanned += ((lid == 0) ? wg_size : 0);
+
+         barrier(CLK_LOCAL_MEM_FENCE);
+      }
+
+      //resetting for next line
+      atomic_dec(isWorking);
       barrier(CLK_LOCAL_MEM_FENCE);
    }
 
-}
-
-__kernel void findSep(
-	__global char* input_string//char array with the input
-	__global uint* line_lengths//uint array of line lengths
-	__local char* lstring//char array to hold the local string
-	__local char* escape//array to hold locations of escape characters
-	__local char prev_escape//char to hold previous escape value
-	__local char* function//array to calculate the function
-	__local char prev_function//char to hold previous function value
-	__local char first_character//char to hold previous first character value for function
-	__local uint* separators//array for valid separators
-	__global uint* finalResults//array to hold final scan results
-	) {
-
-	uint gid = get_global_id(0);//global id
-	uint lid = get_local_id(0);//local id
-	uint wgid = get_group_id(0);//work group id
-	uint wgsize = get_local_size(0);//work group size
-	uint llength = line_lengths[wgid];//work group line length
-	
-   if(lid==0) {
-		prev_escape = 0;
-		first_character = input_string[gid]==OPEN;
-		prev_function = 2;
-	}
-
-	for(uint i = 0; i < llength; i+=wgsize) {
-		lstring[lid] = (lid+i<llength) ? input_string[gid+i] : '0';
-
-		char open = (lstring[lid] == OPEN);
-		char close = (lstring[lid] == CLOSE);
-		escape[lid] = (lstring[lid] == ESC);
-
-		function[lid] = 0;
-		function[lid] |= open;
-		barrier(CLK_LOCAL_MEM_FENCE);
-		function[lid] |= (lid!=0) ? ((!close) || escape[lid-1]) << 1 :
-									((!close) || prev_escape) << 1;
-
-		parScanCompose(function, wgsize);
-		compose(prev_function, function[lid]);
-
-		separators[lid] = (lstring[lid] == SEP) &&
-			!(function[lid] & (1<<first_character));
-
-		parScanAdd(separators, wgsize);
-		separators[lid]+=prev_separators;
-
-		if(lid == wgsize-1) {
-			prev_escape = escape[lid];
-			prev_function = function[lid];
-			prev_separators = separators[lid];
-		}
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-
-		if(lid+i<llength) {
-			finalResults[gid+1] = separators[lid];
-		}
-
-
-
-	}
 }
