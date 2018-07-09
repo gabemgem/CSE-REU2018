@@ -3,6 +3,7 @@
 #define CLOSE ']'
 #define ESC '\\'
 #define NEWLINE '\n'
+#define IDENTITY 2
 
 inline char compose(char f, char g) {
 	char h = 0;
@@ -52,6 +53,67 @@ __kernel void addPostScanStep(__global uint* data, uint size, uint stride){
    data[ind2] = (selected) ? h : data[ind2];
 }
 
+inline void parScanCompose(__local char* func, uint size){
+   uint lid = get_local_id(0);
+   uint ind1 = (lid*2)+1;
+   uint depth = log2((float)size);
+   
+   //scan step
+   for(uint d=0; d<depth; ++d){
+      uint mask = (0x1 << d) - 1;
+      if(((lid & mask) == mask) && (lid < size/2)){
+         uint offset = 0x1 << d;
+         uint ind0 = ind1 - offset;
+         func[ind1] = compose(func[ind0], func[ind1]);
+      }
+
+      barrier(CLK_LOCAL_MEM_FENCE);
+   }
+
+   //post scan step
+   for(uint stride = size/4; stride > 0; stride /= 2){
+      uint ind = (2*stride*(lid + 1)) - 1;
+      uint ind2 = ind + stride;
+      if(ind2 < size){
+         func[ind2] = compose(func[ind], func[ind2]);
+      }
+
+      barrier(CLK_LOCAL_MEM_FENCE);
+   }
+
+}
+
+inline void parScanAdd(__local uint* data, uint size){
+   uint lid = get_local_id(0);
+   uint ind1 = (lid*2)+1;
+   uint depth = log2((float)size);
+   
+   //scan step
+   for(uint d=0; d<depth; ++d){
+      uint mask = (0x1 << d) - 1;
+      if(((lid & mask) == mask) && (lid < size/2)){
+         uint offset = 0x1 << d;
+         uint ind0 = ind1 - offset;
+         data[ind1] += data[ind0];
+      }
+
+      barrier(CLK_LOCAL_MEM_FENCE);
+   }
+
+   //post scan step
+   for(uint stride = size/4; stride > 0; stride /= 2){
+      uint ind = (2*stride*(lid + 1)) - 1;
+      uint ind2 = ind + stride;
+      if(ind2 < size){
+         data[ind2] += data[ind];
+      }
+
+      barrier(CLK_LOCAL_MEM_FENCE);
+   }
+
+}
+
+
 /* NOTE: It may be slightly more efficient to use atomic function to 
    select the first PE to respond to do single-person tasks
    (ex: setting position and saving previous values) */
@@ -66,7 +128,7 @@ __kernel void findSep(
    __local char* escape,         //array to hold locations of escape characters
    __local prev_escape,          //holds the escape value of the last element in for previous buffer
    __local prev_function,        //holds the function value of the last element in for previous buffer
-   __local prev_val,             //holds the separator value of the last element in for previous buffer
+   __local prev_sep,             //holds the separator value of the last element in for previous buffer
    __local char* function,       //array to calculate the function
    __local char elems_scanned,   //tracks the number if elements scanned
    __local char first_char,      //denotes first character of a line is delimited
@@ -85,6 +147,10 @@ __kernel void findSep(
          curr_pos = atomic_inc(pos_ptr) * 2;
          length = pos[curr_pos + 1] - pos[curr_pos];
          first_char = (input_string[pos[curr_pos]] == OPEN);
+
+         prev_escape = 0;
+         prev_function = IDENTITY;
+         prev_sep = 0;
       }
       barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -116,13 +182,13 @@ __kernel void findSep(
 
          //parallel add over separator elements
          parScanAdd(separators, wgsize);
-         separators[lid] += prev_val;
+         separators[lid] += prev_sep;
 
          //save result of last element
          if(lid == wg_size - 1) {
 			   prev_escape = escape[lid];
 			   prev_function = function[lid];
-			   prev_val = separators[lid];
+			   prev_sep = separators[lid];
 		   }
 
          //increase elems_scanned by the work group size
