@@ -192,25 +192,22 @@ __kernel void findSep(
          if(lid == 0){
             if(prev_sep != separator[lid]){
                finalResults[curr_pos + separator[lid]] = index;
-               atomic_inc(result_sizes + (curr_pos / 2));
+               atomic_inc(&result_sizes[curr_pos/2]);
             }
          }
          else if(separator[lid] != separator[lid-1]){
                finalResults[curr_pos + separator[lid]] = index;
-               atomic_inc(result_sizes + (curr_pos / 2));
+               atomic_inc(&result_sizes[curr_pos/2]);
          }
 
          //save results of last element
+         //increase elems_scanned by the work group size
          if(lid == wg_size - 1) {
 			   prev_escape = escape[lid];
 			   prev_function = function[lid];
 			   prev_sep = separators[lid];
+			   elems_scanned += wg_size;
 		   }
-
-         //increase elems_scanned by the work group size
-         if(lid==0) {
-            elems_scanned += wg_size;
-         }
 
          barrier(CLK_LOCAL_MEM_FENCE);
       }
