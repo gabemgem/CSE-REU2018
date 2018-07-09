@@ -20,6 +20,36 @@ __kernel void newLine(__global char * input, __global uint * output){
    output[gid] = input[gid] == NEWLINE;
 }
 
+/* addScanStep and addPostScanStep used only for finding the postions
+   of lines in data chunck */
+__kernel void addScanStep(__global uint* data, uint size, uint d){
+   uint gid = get_global_id(0);
+
+   int mask = (0x1 << d) - 1;
+   char selected = ((gid & mask) == mask) && (gid < size/2);
+   
+   uint ind1 = (selected) ? (gid*2)+1 : 0;
+   uint offset = 0x1 << d;
+   uint ind0 = (selected) ? ind1 - offset : 0;
+   
+   uint h = data[ind0] + data[ind1];
+   data[ind1] = (selected) ? h : data[ind1];
+}
+
+__kernel void addPostScanStep(__global uint* data, uint size, uint stride){
+   uint gid = get_global_id(0);
+
+   uint ind = (2*stride*(gid + 1)) - 1;
+   uint ind2 = ind + stride;
+   char selected = ind2 < size;
+   
+   ind = (selected) ? ind : 0;
+   ind2 = (selected) ? ind2 : 0;
+
+   uint h = data[ind] + data[ind2];
+   data[ind2] = (selected) ? h : data[ind2];
+}
+
 /* NOTE: It may be slightly more efficient to use atomic function to 
    select the first PE to respond to do single-person tasks
    (ex: setting position and saving previous values) */
