@@ -15,7 +15,9 @@ inline char compose(char f, char g) {
 }
 
 /* Finds newline characters and marks them*/
-__kernel void newLine(__global char * input, __global uint * output){
+__kernel void newLine(__global char * input,
+					  uint input_length,
+					  __global uint * output){
    uint gid = get_local_id(0);
    output[gid] = input[gid] == NEWLINE;
 }
