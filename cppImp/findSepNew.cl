@@ -18,8 +18,14 @@ inline char compose(char f, char g) {
 __kernel void newLine(__global char * input,
 					  uint input_length,
 					  __global uint * output){
-   uint gid = get_local_id(0);
-   output[gid] = input[gid] == NEWLINE;
+	uint gid = get_local_id(0);
+	uint gsize = get_global_size(0);
+    for(uint i = 0; i < input_length; i+=gsize) {
+    	if(gid+i<input_length) {
+    		output[gid+i] = input[gid] == NEWLINE;
+    	}
+	}
+   
 }
 
 /* addScanStep and addPostScanStep used only for finding the postions
