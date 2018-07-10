@@ -76,5 +76,5 @@ int main() {
    //Needs to be vector of devices
    program.build(device);
 
-   Kernel initFunc(program, "initFunc");
+   Kernel findSep(program, "findSep");
 }

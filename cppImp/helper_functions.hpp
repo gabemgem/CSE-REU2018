@@ -33,7 +33,11 @@ void read_chunk(FILE * fp, char ** chunk, char ** residual,
       if((c = fgetc(fp)) == EOF){
          //getting rid of any possible ending newlines
          while((*chunk)[count-1] == '\n'){
-            *chunk = (char *)realloc(*chunk, (--count)*sizeof(char));
+            char* nchunk = (char *)realloc(*chunk, (--count)*sizeof(char));
+            if(!nchunk) {
+               exit(1);
+            }
+            *chunk = nchunk;
          }
          *residual = NULL;
          *residual_len = 0;
@@ -41,7 +45,11 @@ void read_chunk(FILE * fp, char ** chunk, char ** residual,
          return;
       }
 
-      *chunk = (char *)realloc(*chunk, (++count)*sizeof(char));
+      char* nchunk = (char *)realloc(*chunk, (++count)*sizeof(char));
+      if(!nchunk) {
+         exit(1);
+      }
+      *chunk = nchunk;
       (*chunk)[count-1] = c;
    }
 
@@ -60,7 +68,11 @@ void read_chunk(FILE * fp, char ** chunk, char ** residual,
       memcpy(*residual, (*chunk) + chunk_size + 1, sizeof(char)*(res_size));
 
       //Getting rid of incomplete line from chunk and throwing away '\n'
-      *chunk = (char*)realloc(*chunk, sizeof(char)*(chunk_size));
+      char* nchunk = (char*)realloc(*chunk, sizeof(char)*(chunk_size));
+      if(!nchunk) {
+         exit(1);
+      }
+      *chunk = nchunk;
 
       *len = chunk_size;
       *residual_len = res_size;
@@ -68,7 +80,11 @@ void read_chunk(FILE * fp, char ** chunk, char ** residual,
    }
 
    //throwing away ending '\n'
-   *chunk = (char*)realloc(*chunk, sizeof(char)*(count-1));
+   char* nchunk = (char*)realloc(*chunk, sizeof(char)*(count-1));
+   if(!nchunk) {
+      exit(1);
+   }
+   *chunk = nchunk;
    *residual = NULL;
    *residual_len = 0;
    *len = count-1;
@@ -90,6 +106,33 @@ void read_chunk_pp(std::ifstream & file, std::string & chunk, std::string & resi
       }
 
       chunk += line + "\n";
+      size = chunk.size();
+   }
+}
+
+/* Reads in a chunk of data from file. Ensures that  the chunk
+   starts/ends on with a complete line. Stores beginning and 
+   end locations of lines.
+*/
+void read_chunk_with_nums(std::ifstream &file, std::string &chunk, 
+                          std::string &residual, unsigned int* linenums){
+   unsigned int size = chunk.size();
+   unsigned int loc = 0, loccount = 0;
+   std::string line;
+   while(std::getline(file, line)){
+      if(size + line.size() > CHUNK_SIZE){
+         //removing ending newline
+         chunk = chunk.substr(0, size-1);
+         residual = line;
+         return;
+      }
+      line+="\n";
+      linenums[2*loccount] = loc;
+      loc+=line.size();
+      linenums[2*loccount+1] = loc;
+      loc++;
+      loccount++;
+      chunk += line;
       size = chunk.size();
    }
 }
