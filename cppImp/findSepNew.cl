@@ -126,9 +126,9 @@ __kernel void findSep(
    __local uint curr_pos,        //holds copy of the current line pointer for work group
    __local char* lstring,        //array to hold the local string
    __local char* escape,         //array to hold locations of escape characters
-   __local prev_escape,          //holds the escape value of the last element in for previous buffer
-   __local prev_function,        //holds the function value of the last element in for previous buffer
-   __local prev_sep,             //holds the separator value of the last element in for previous buffer
+   __local char prev_escape,          //holds the escape value of the last element in for previous buffer
+   __local char prev_function,        //holds the function value of the last element in for previous buffer
+   __local uint prev_sep,             //holds the separator value of the last element in for previous buffer
    __local char* function,       //array to calculate the function
    __local char elems_scanned,   //tracks the number if elements scanned
    __local char first_char,      //denotes first character of a line is delimited
