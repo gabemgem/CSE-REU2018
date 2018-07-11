@@ -95,6 +95,9 @@ void read_chunk(FILE * fp, char ** chunk, char ** residual,
    starts/ends on with a complete line.
 */
 void read_chunk_pp(std::ifstream & file, std::string & chunk, std::string & residual){
+   if(!file.is_open()) {
+      exit(1);
+   }
    unsigned int size = chunk.size();
    std::string line;
    while(std::getline(file, line)){
@@ -108,6 +111,7 @@ void read_chunk_pp(std::ifstream & file, std::string & chunk, std::string & resi
       chunk += line + "\n";
       size = chunk.size();
    }
+   file.close();
 }
 
 /* Reads in a chunk of data from file. Ensures that  the chunk
