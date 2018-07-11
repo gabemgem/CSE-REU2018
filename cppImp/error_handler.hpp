@@ -1,15 +1,16 @@
 #ifndef ERR_HANDLER
 #define ERR_HANDLER
 
-#include <stdio.h>
-#include <CL/cl.hpp>
+#include <iostream>
+#include <string>
+#include <CL/cl2.hpp>
 
-void error_handler(cl_int err, char* message) {
+void error_handler(cl_int err, std::string message = NULL) {
 
    if(err == CL_SUCCESS)
       return;
 
-   char* error_message = "";
+   std::string error_message;
    
    switch(err){
       // run-time and JIT compiler errors
@@ -148,9 +149,9 @@ void error_handler(cl_int err, char* message) {
       default: error_message = "Unknown OpenCL error";
    }
 
-   perror(error_message);
-   if(message!=NULL)
-      perror(message);
+
+   std::cout << error_message << std::endl;
+   std::cout << message << std::endl;
    exit(1);
 }
 
