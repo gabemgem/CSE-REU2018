@@ -5,7 +5,7 @@
 #include <string>
 #include <CL/cl2.hpp>
 
-void error_handler(cl_int err, std::string message = NULL) {
+void error_handler(cl_int err, char *message = NULL) {
 
    if(err == CL_SUCCESS)
       return;
@@ -151,7 +151,9 @@ void error_handler(cl_int err, std::string message = NULL) {
 
 
    std::cout << error_message << std::endl;
-   std::cout << message << std::endl;
+   if(message != NULL){
+      std::cout << message << std::endl;
+   }
    exit(1);
 }
 

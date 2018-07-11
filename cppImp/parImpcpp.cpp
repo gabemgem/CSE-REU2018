@@ -6,6 +6,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <cstdlib>
 
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
@@ -46,7 +47,9 @@ cl::Device getDevice(cl::Platform platform, int i, bool display=false) {
 }
 
 int main() {
-   
+
+   cl_int err;
+
    std::cout << "-2" << std::endl;
 
 	cl::Platform platform = getPlatform();
@@ -68,30 +71,34 @@ int main() {
    cl::CommandQueue queue(context, device);
 
    // Read source file
-   std::ifstream sourceFile("findSep.cl");
+   std::ifstream sourceFile("findSepNew.cl");
    
    std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
+   //std::cout << sourceCode << std::endl;
 
    cl::Program::Sources sources;
 
    sources.push_back({sourceCode.c_str(), sourceCode.length()+1});
 
    // Make program of the source code in the context
-   cl::Program program = cl::Program(context, sources);
+   cl::Program program = cl::Program(context, sources, &err);
+   error_handler(err);
 
    std::cout << "1" << std::endl;
 
    //Needs to be vector of devices
-   program.build({device});
+   err = program.build({device});
+   error_handler(err);
    
    std::cout << "2" << std::endl;
 
-   unsigned int global_size = 1 << 31,
+   unsigned int global_size,
                 local_size = 1024;
 
    std::cout << "3" << std::endl;
 
-   cl::Kernel newLine(program, "newLine");
+   cl::Kernel newLine(program, "newLine", &err);
+   error_handler(err);
    cl::Kernel findSep(program, "findSep");
 
    std::string chunk, residual;
@@ -99,14 +106,23 @@ int main() {
    std::ifstream inputFile("input.txt");
    read_chunk_pp(inputFile, chunk, residual);
 
+   global_size = chunk.size();
+   cl_char * c_chunk = (cl_char *)malloc(chunk.size());
+   for(int i=0; i<chunk.size(); ++i){
+      c_chunk[i] = chunk[i];
+      std::cout << c_chunk[i];
+   }
+   std::cout << "\n" << std::endl;
+
    std::cout << "4" << std::endl;
 
    cl::Buffer input_string(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                           chunk.size(), (void *)chunk.c_str());
+                           chunk.size(), c_chunk);
 
    cl::Buffer newLine_arr(context, CL_MEM_READ_WRITE, sizeof(int)*chunk.size());
 
-   unsigned int * output = (unsigned int *)malloc(chunk.size());
+   unsigned int * output = (unsigned int *)calloc(chunk.size(), sizeof(unsigned int));
+   // unsigned int * output = new unsigned int[chunk.size()];
 
    std::cout << "5" << std::endl;
 
@@ -126,13 +142,12 @@ int main() {
    std::cout << "7" << std::endl;
 
    for(unsigned int i=0; i<chunk.size(); ++i){
-      if(output[i]){
-         std::cout << i << " ";
-      }
+      std::cout << output[i];
    }
    std::cout << std::endl;
 
    free(output);
+   // delete[] output;
 
    return 0;
 }
