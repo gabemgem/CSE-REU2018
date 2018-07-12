@@ -1,7 +1,8 @@
 #ifndef HELPER_FUNCTIONS
 #define HELPER_FUNCTIONS
 
-//#include <cstdio>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <string>
