@@ -11,7 +11,7 @@
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
 
-cl::Platform getPlatform() {
+void getPlatform() {
 	std::vector<cl::Platform> all_platforms;
 	cl::Platform::get(&all_platforms);
 
@@ -26,7 +26,11 @@ cl::Platform getPlatform() {
 			plat = p;
 		}
 	}
-	return plat;
+	cl::Platform newP = cl::Platform::setDefault(plat);
+	if(newP != plat) {
+		std::cout<<"Error setting default platform.";
+		exit(1);
+	}
 }
 
 cl::Device getDevice(cl::Platform platform, int i, bool display=false) {
@@ -52,8 +56,17 @@ int main() {
 
    std::cout << "-2" << std::endl;
 
-	cl::Platform platform = getPlatform();
-	cl::Device device = getDevice(platform, 0);
+	getPlatform();
+	cl::Platform platform = cl::Platform::getDefault(&err);
+	error_handler(err);
+	cl::Device device = getDevice(platform, 0, true);
+	cl::Device newD = cl::Device::setDefault(device);
+	if(newD != device) {
+		std::cout<<"Error setting default device.";
+		return -1;
+	}
+	//device = cl::Device::getDefault(&err);
+	//error_handler(err);
 
    std::cout << "-1" << std::endl;
 
@@ -63,7 +76,8 @@ int main() {
       (cl_context_properties)(platform)(), 
       0 
    };
-   cl::Context context( CL_DEVICE_TYPE_CPU, cps);
+   cl::Context context( device, cps, NULL, NULL, &err);
+   error_handler(err);
 
    std::cout << "0" << std::endl;
 
@@ -108,7 +122,7 @@ int main() {
 
    global_size = chunk.size();
    cl_char * c_chunk = (cl_char *)malloc(chunk.size());
-   for(int i=0; i<chunk.size(); ++i){
+   for(unsigned int i=0; i<chunk.size(); ++i){
       c_chunk[i] = chunk[i];
       std::cout << c_chunk[i];
    }
