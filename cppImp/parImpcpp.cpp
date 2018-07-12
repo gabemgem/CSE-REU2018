@@ -69,7 +69,7 @@ int main() {
 	//error_handler(err);
 
    std::cout << "-1" << std::endl;
-
+   
 	// Select the default platform and create a context using this platform and the GPU
    cl_context_properties cps[3] = { 
       CL_CONTEXT_PLATFORM, 
@@ -90,7 +90,24 @@ int main() {
    std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
    //std::cout << sourceCode << std::endl;
 
-   cl::Program::Sources sources;
+   std::vector<std::string> programString {sourceCode};
+   cl::Program program(programString);
+   try {
+   	program.build("-cl-std=CL2.0");
+   }
+   catch (...) {
+		cl_int buildErr = CL_SUCCESS;
+		auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
+		for (auto &pair : buildInfo) {
+			std::cerr << pair.second << std::endl << std::endl;
+		}
+		return 1;
+	}
+
+	cl::KernelFunctor<> newLine(program, "newLine", &err);
+	error_handler(err);
+
+   /*cl::Program::Sources sources;
 
    sources.push_back({sourceCode.c_str(), sourceCode.length()+1});
 
@@ -102,18 +119,18 @@ int main() {
 
    //Needs to be vector of devices
    err = program.build({device});
-   error_handler(err);
+   error_handler(err);*/
    
    std::cout << "2" << std::endl;
 
    unsigned int global_size,
-                local_size = 1024;
+                local_size = 1024;/*
 
    std::cout << "3" << std::endl;
 
    cl::Kernel newLine(program, "newLine", &err);
    error_handler(err);
-   cl::Kernel findSep(program, "findSep");
+   cl::Kernel findSep(program, "findSep");*/
 
    std::string chunk, residual;
 
@@ -130,7 +147,7 @@ int main() {
 
    std::cout << "4" << std::endl;
 
-   cl::Buffer input_string(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+   /*cl::Buffer input_string(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                            chunk.size(), c_chunk);
 
    cl::Buffer newLine_arr(context, CL_MEM_READ_WRITE, sizeof(int)*chunk.size());
@@ -160,7 +177,7 @@ int main() {
    }
    std::cout << std::endl;
 
-   free(output);
+   free(output);*/
    // delete[] output;
 
    return 0;
