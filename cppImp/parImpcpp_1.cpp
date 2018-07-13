@@ -10,7 +10,7 @@
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
 
-#define DEVICE_TYPE CL_DEVICE_TYPE_CPU
+#define DEVICE_TYPE CL_DEVICE_TYPE_GPU
 #define KERNEL_FILE "test.cl"
 #define INPUT_FILE "input.txt"
 
