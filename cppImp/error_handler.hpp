@@ -3,9 +3,9 @@
 
 #include <iostream>
 #include <string>
-#include <CL/cl2.hpp>
+#include <CL/cl.hpp>
 
-void error_handler(cl_int err, char *message = NULL) {
+void error_handler(cl_int err, std::string message = "") {
 
    if(err == CL_SUCCESS)
       return;
@@ -151,7 +151,7 @@ void error_handler(cl_int err, char *message = NULL) {
 
 
    std::cout << error_message << std::endl;
-   if(message != NULL){
+   if(!message.empty()){
       std::cout << message << std::endl;
    }
    exit(1);

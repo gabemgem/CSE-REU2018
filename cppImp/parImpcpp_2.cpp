@@ -24,6 +24,7 @@ void getPlatform() {
 		std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
 		if(platver.find("OpenCL 2.") != std::string::npos) {
 			plat = p;
+         break;
 		}
 	}
 	cl::Platform newP = cl::Platform::setDefault(plat);
