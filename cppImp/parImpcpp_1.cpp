@@ -1,11 +1,13 @@
 
 #define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
 #include <CL/cl.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <vector>
 
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
@@ -13,6 +15,8 @@
 #define DEVICE_TYPE CL_DEVICE_TYPE_GPU
 #define KERNEL_FILE "test.cl"
 #define INPUT_FILE "input.txt"
+
+using namespace std;
 
 cl_device_id create_device() {
    cl_int err;
@@ -42,11 +46,11 @@ cl_device_id create_device() {
    return device;
 }
 
-cl_program build_program(cl_context context, std::string filename){
+cl_program build_program(cl_context context, string filename){
    cl_int err;
 
-   std::ifstream progFile(filename);
-   std::string src(std::istreambuf_iterator<char>(progFile), (std::istreambuf_iterator<char>()));
+   ifstream progFile(filename);
+   string src(istreambuf_iterator<char>(progFile), (istreambuf_iterator<char>()));
 
    const char * src_c = src.c_str();
    size_t src_size = src.size();
@@ -62,7 +66,7 @@ cl_program build_program(cl_context context, std::string filename){
 }
 
 int main(){
-
+      
    cl_int err;
 
    cl_device_id device = create_device();
@@ -71,14 +75,14 @@ int main(){
 
    cl_program program = build_program(context, KERNEL_FILE);
 
-   // cl_command_queue queue = clCreateCommandQueue(context, device, 0, &err);
-   cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, NULL, &err);
+   cl_command_queue queue = clCreateCommandQueue(context, device, 0, &err);
+   // cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, NULL, &err);
    error_handler(err, "Failed to create command queue");
 
    cl_kernel initFunc = clCreateKernel(program, "initFunc", &err);
    error_handler(err, "Failed to create initFunc kernel");
 
-   size_t global_size = 1024, local_size = 64;
+   size_t global_size = 1024;
 
    cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, global_size*sizeof(cl_uint), NULL, &err);
    error_handler(err, "Failed to create out buffer");
@@ -102,9 +106,9 @@ int main(){
    error_handler(err, "Couldn't do clFinish");
 
    for(size_t i=0; i<global_size; ++i){
-      std::cout << out_arr[i] << " ";
+      cout << out_arr[i] << " ";
    }
-   std::cout << std::endl;
+   cout << endl;
 
    free(out_arr);
 
