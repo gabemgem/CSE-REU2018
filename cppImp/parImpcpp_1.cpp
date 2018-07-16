@@ -13,8 +13,10 @@
 #include "helper_functions.hpp"
 
 #define DEVICE_TYPE CL_DEVICE_TYPE_GPU
-#define KERNEL_FILE "test.cl"
+#define KERNEL_FILE "findSepNew.cl"
 #define INPUT_FILE "input.txt"
+#define GLOBAL_SIZE 1024
+#define LOCAL_SIZE 64
 
 using namespace std;
 
@@ -46,7 +48,53 @@ cl_device_id create_device() {
    return device;
 }
 
-cl_program build_program(cl_context context, string filename){
+cl_program build_program(cl_context context, cl_device_id dev, std::string filename){
+   
+   cl_program program;
+   FILE *program_handle;
+   char *program_buffer, *program_log;
+   size_t program_size, log_size;
+   int err;
+
+   /* Read program file and place content into buffer */
+   program_handle = fopen(filename.c_str(), "r");
+   if(program_handle == NULL) {
+      perror("Couldn't find the program file");
+      exit(1);
+   }
+   fseek(program_handle, 0, SEEK_END);
+   program_size = ftell(program_handle);
+   rewind(program_handle);
+   program_buffer = (char*)malloc(program_size + 1);
+   program_buffer[program_size] = '\0';
+   fread(program_buffer, sizeof(char), program_size, program_handle);
+   fclose(program_handle);
+
+   /* Create program from file */
+   program = clCreateProgramWithSource(context, 1, 
+      (const char**)&program_buffer, &program_size, &err);
+   error_handler(err, "Couldn't create the program");
+   free(program_buffer);
+
+   /* Build program */
+   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+   if(err < 0) {
+
+      /* Find size of log and print to std output */
+      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
+            0, NULL, &log_size);
+      program_log = (char*) malloc(log_size + 1);
+      program_log[log_size] = '\0';
+      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
+            log_size + 1, program_log, NULL);
+      printf("%s\n", program_log);
+      free(program_log);
+      exit(1);
+   }
+
+   return program;
+
+   /*
    cl_int err;
 
    ifstream progFile(filename);
@@ -62,56 +110,100 @@ cl_program build_program(cl_context context, string filename){
    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
    error_handler(err, "Failed to Build Program");
 
-   return program;
+   return program;*/
 }
 
-int main(){
-      
+
+int main(int argc, char** argv){
+
+   if(argc!=2) {
+      std::cout<<"Invalid number of inputs.\n";
+      std::cout<<"Please enter in the number of lines\n";
+      exit(1);
+   }
+
+   cl_uint nlines = atoi(argv[1]);
+
+   //Get input file
+   std::string chunk, residual;
+   std::ifstream inputFile(INPUT_FILE);
+   read_chunk_pp(inputFile, chunk, residual);
+
+   cl_char* c_chunk = (cl_char*)malloc(chunk.size());
+   for(unsigned int i=0; i<chunk.size(); ++i){
+      c_chunk[i] = chunk[i];
+      std::cout<<c_chunk[i];
+   }
+   std::cout<<std::endl;
+   std::cout<<"Read in file\n"<<std::endl;
+
+
+   size_t global_size = GLOBAL_SIZE;
+   size_t local_size = LOCAL_SIZE;
+   cl_uint chunk_size = chunk.size();
+
    cl_int err;
 
+
+   //Create device, context, program, and queue
    cl_device_id device = create_device();
    cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
    error_handler(err, "Couldn't create a context");
 
-   cl_program program = build_program(context, KERNEL_FILE);
+   cl_program program = build_program(context, device, KERNEL_FILE);
 
-   cl_command_queue queue = clCreateCommandQueue(context, device, 0, &err);
-   // cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, NULL, &err);
+
+   std::cout<<"Built program"<<std::endl;
+   // cl_command_queue queue = clCreateCommandQueue(context, device, 0, &err);
+   cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, NULL, &err);
    error_handler(err, "Failed to create command queue");
 
-   cl_kernel initFunc = clCreateKernel(program, "initFunc", &err);
-   error_handler(err, "Failed to create initFunc kernel");
 
-   size_t global_size = 1024;
 
-   cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, global_size*sizeof(cl_uint), NULL, &err);
+   //Create buffers
+   cl_mem input_string = clCreateBuffer(context, CL_MEM_READ_WRITE |
+            CL_MEM_COPY_HOST_PTR, chunk.size(), c_chunk, &err);
+
+
+   cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, chunk.size()*sizeof(cl_uint), NULL, &err);
    error_handler(err, "Failed to create out buffer");
 
-   err = clSetKernelArg(initFunc, 0, sizeof(cl_mem), &out);
-   error_handler(err, "Couldn't set kernel arg");
-   err = clSetKernelArg(initFunc, 1, sizeof(cl_uint), &global_size);
-   error_handler(err, "Couldn't set kernel arg");
+   
+   //Create kernels
+   cl_kernel newLine = clCreateKernel(program, "newLine", &err);
+   error_handler(err, "Failed to create newLine kernel");
 
-   err = clEnqueueNDRangeKernel(queue, initFunc, 1, NULL, &global_size, NULL, 0, NULL, NULL);
+
+   
+
+   err = clSetKernelArg(newLine, 0, sizeof(cl_mem), &input_string);
+   err = clSetKernelArg(newLine, 1, sizeof(cl_mem), &out);
+   err = clSetKernelArg(newLine, 2, sizeof(cl_uint), &chunk_size);
+   error_handler(err, "Couldn't set args for newLine");
+
+   err = clEnqueueNDRangeKernel(queue, newLine, 1, NULL, &global_size, NULL, 0, NULL, NULL);
    error_handler(err, "Couldn't enqueue kernel");
    err = clFinish(queue);
    error_handler(err, "Couldn't do clFinish");
 
 
-   cl_uint * out_arr = (cl_uint*)malloc(global_size*sizeof(cl_uint));
+   cl_uint * out_arr = (cl_uint*)malloc(chunk.size()*sizeof(cl_uint));
 
-   err = clEnqueueReadBuffer(queue, out, CL_TRUE, 0, global_size*sizeof(cl_uint), out_arr, 0, NULL, NULL);
+   err = clEnqueueReadBuffer(queue, out, CL_TRUE, 0, chunk.size()*sizeof(cl_uint), out_arr, 0, NULL, NULL);
    error_handler(err, "Couldn't read buffer");
    err = clFinish(queue);
    error_handler(err, "Couldn't do clFinish");
 
-   for(size_t i=0; i<global_size; ++i){
-      cout << out_arr[i] << " ";
+
+   for(size_t i=0; i<chunk.size(); ++i){
+      std::cout << out_arr[i] << " ";
    }
    cout << endl;
 
    free(out_arr);
 
+   clReleaseMemObject(input_string);
+   clReleaseMemObject(out);
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseDevice(device);
