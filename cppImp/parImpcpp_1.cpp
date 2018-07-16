@@ -1,11 +1,13 @@
 
 #define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
 #include <CL/cl.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <vector>
 
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
@@ -15,6 +17,8 @@
 #define INPUT_FILE "input.txt"
 #define GLOBAL_SIZE 1024
 #define LOCAL_SIZE 64
+
+using namespace std;
 
 cl_device_id create_device() {
    cl_int err;
@@ -44,6 +48,7 @@ cl_device_id create_device() {
    return device;
 }
 
+<<<<<<< HEAD
 cl_program build_program(cl_context context, cl_device_id dev, std::string filename){
    
    cl_program program;
@@ -91,10 +96,13 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
    return program;
 
    /*
+=======
+cl_program build_program(cl_context context, string filename){
+>>>>>>> af70a0c9d963c33ff6bda6ab4b8db62a967e7131
    cl_int err;
 
-   std::ifstream progFile(filename);
-   std::string src(std::istreambuf_iterator<char>(progFile), (std::istreambuf_iterator<char>()));
+   ifstream progFile(filename);
+   string src(istreambuf_iterator<char>(progFile), (istreambuf_iterator<char>()));
 
    const char * src_c = src.c_str();
    size_t src_size = src.size();
@@ -109,6 +117,7 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
    return program;*/
 }
 
+<<<<<<< HEAD
 int main(int argc, char** argv){
 
    if(argc!=2) {
@@ -136,6 +145,10 @@ int main(int argc, char** argv){
    size_t global_size = GLOBAL_SIZE;
    size_t local_size = LOCAL_SIZE;
    cl_uint chunk_size = chunk.size();
+=======
+int main(){
+      
+>>>>>>> af70a0c9d963c33ff6bda6ab4b8db62a967e7131
    cl_int err;
 
 
@@ -146,15 +159,24 @@ int main(int argc, char** argv){
 
    cl_program program = build_program(context, device, KERNEL_FILE);
 
+<<<<<<< HEAD
    std::cout<<"Built program"<<std::endl;
    // cl_command_queue queue = clCreateCommandQueue(context, device, 0, &err);
    cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, NULL, &err);
+=======
+   cl_command_queue queue = clCreateCommandQueue(context, device, 0, &err);
+   // cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, NULL, &err);
+>>>>>>> af70a0c9d963c33ff6bda6ab4b8db62a967e7131
    error_handler(err, "Failed to create command queue");
 
 
+<<<<<<< HEAD
    //Create buffers
    cl_mem input_string = clCreateBuffer(context, CL_MEM_READ_WRITE |
             CL_MEM_COPY_HOST_PTR, chunk.size(), c_chunk, &err);
+=======
+   size_t global_size = 1024;
+>>>>>>> af70a0c9d963c33ff6bda6ab4b8db62a967e7131
 
    cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, chunk.size()*sizeof(cl_uint), NULL, &err);
    error_handler(err, "Failed to create out buffer");
@@ -185,10 +207,15 @@ int main(int argc, char** argv){
    err = clFinish(queue);
    error_handler(err, "Couldn't do clFinish");
 
+<<<<<<< HEAD
    for(size_t i=0; i<chunk.size(); ++i){
       std::cout << out_arr[i] << " ";
+=======
+   for(size_t i=0; i<global_size; ++i){
+      cout << out_arr[i] << " ";
+>>>>>>> af70a0c9d963c33ff6bda6ab4b8db62a967e7131
    }
-   std::cout << std::endl;
+   cout << endl;
 
    free(out_arr);
 
