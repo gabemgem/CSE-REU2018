@@ -164,10 +164,16 @@ int main(int argc, char** argv){
    cl_mem input_string = clCreateBuffer(context, CL_MEM_READ_WRITE |
             CL_MEM_COPY_HOST_PTR, chunk.size(), c_chunk, &err);
 
-
    cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, chunk.size()*sizeof(cl_uint), NULL, &err);
    error_handler(err, "Failed to create out buffer");
 
+   cl_mem out_pos  = clCreateBuffer(context, CL_MEM_READ_WRITE, nlines*sizeof(cl_uint), NULL, &err);
+   
+   cl_uint* pos_ptr = (cl_uint*)malloc(sizeof(cl_uint));
+   *pos_ptr = 0;
+   cl_mem pos_ptr_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+      CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), pos_ptr, &err); 
+   error_handler(err);
    
    //Create kernels
    cl_kernel newLine = clCreateKernel(program, "newLine", &err);
@@ -179,6 +185,9 @@ int main(int argc, char** argv){
    err = clSetKernelArg(newLine, 0, sizeof(cl_mem), &input_string);
    err = clSetKernelArg(newLine, 1, sizeof(cl_mem), &out);
    err = clSetKernelArg(newLine, 2, sizeof(cl_uint), &chunk_size);
+   err = clSetKernelArg(newLine, 3, sizeof(cl_mem), &out_pos);
+   err = clSetKernelArg(newLine, 4, sizeof(cl_mem), &pos_ptr_buffer);
+   err = clSetKernelArg(newLine, 5, sizeof(cl_uint), &nlines);
    error_handler(err, "Couldn't set args for newLine");
 
    err = clEnqueueNDRangeKernel(queue, newLine, 1, NULL, &global_size, NULL, 0, NULL, NULL);
@@ -188,9 +197,11 @@ int main(int argc, char** argv){
 
 
    cl_uint * out_arr = (cl_uint*)malloc(chunk.size()*sizeof(cl_uint));
+   cl_uint * line_out_arr = (cl_uint*)malloc(nlines*sizeof(cl_uint));
 
    err = clEnqueueReadBuffer(queue, out, CL_TRUE, 0, chunk.size()*sizeof(cl_uint), out_arr, 0, NULL, NULL);
    error_handler(err, "Couldn't read buffer");
+   err = clEnqueueReadBuffer(queue, out_pos, CL_TRUE, 0, nlines*sizeof(cl_uint), line_out_arr, 0, NULL, NULL);
    err = clFinish(queue);
    error_handler(err, "Couldn't do clFinish");
 
@@ -198,7 +209,12 @@ int main(int argc, char** argv){
    for(size_t i=0; i<chunk.size(); ++i){
       std::cout << out_arr[i] << " ";
    }
-   cout << endl;
+   cout << endl << endl;
+
+   for(size_t i=0; i<nlines; ++i) {
+      std::cout << line_out_arr[i] << " ";
+   }
+   cout<<endl;
 
    free(out_arr);
 
