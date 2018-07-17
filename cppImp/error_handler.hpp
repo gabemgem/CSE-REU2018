@@ -5,11 +5,7 @@
 #include <string>
 #include <CL/cl.hpp>
 
-void error_handler(cl_int err, std::string message = "") {
-
-   if(err == CL_SUCCESS)
-      return;
-
+std::string get_error_message(cl_int err){
    std::string error_message;
    
    switch(err){
@@ -149,11 +145,44 @@ void error_handler(cl_int err, std::string message = "") {
       default: error_message = "Unknown OpenCL error";
    }
 
+   return error_message;
+}
+
+// Handles an error from OpenCL
+void error_handler(cl_int err, std::string message = "") {
+
+   if(err == CL_SUCCESS)
+      return;
+
+   std::string error_message = get_error_message(err);
 
    std::cout << error_message << std::endl;
    if(!message.empty()){
       std::cout << message << std::endl;
    }
+   exit(1);
+}
+
+//Handles a vector of errors from OpenCL and clears the vector when done
+void error_handler(std::vector<cl_int> & errors, std::string message = ""){
+   bool noneBad = true;
+   for(size_t i=0; i<errors.size(); ++i){
+      if(errors[i] == CL_SUCCESS) continue;
+      else noneBad = false;
+
+      std::string error_message = get_error_message(errors[i]);
+
+      std::cout << error_message << std::endl;
+      if(!message.empty()){
+         std::cout << message << std::endl;
+      }
+   }
+
+   if(noneBad){
+      errors.clear();
+      return;
+   }
+
    exit(1);
 }
 
