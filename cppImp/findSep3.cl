@@ -196,7 +196,39 @@ __kernel void findSep(
          barrier(CLK_LOCAL_MEM_FENCE);
 
          //parallel compose over function elements
-         parScanCompose(function, wg_size);
+         
+         uint depth = (uint)log2((float)wg_size);
+         for(uint d=0; d<depth; ++d) {
+            int mask = (0x1 << d) - 1;
+            char selected = ((lid & mask) == mask) && (lid < wg_size/2);
+            
+            uint ind1 = (selected) ? (lid*2)+1 : 0;
+            uint offset = 0x1 << d;
+            uint ind0 = (selected) ? ind1 - offset : 0;
+            
+            char h = compose(function[ind0], function[ind1]);
+            function[ind1] = (selected) ? h : function[ind1];
+         }
+
+         for(uint stride = wg_size/4; stride>0; stride/=2) {
+            uint ind = (2*stride*(lid + 1)) - 1;
+            uint ind2 = ind + stride;
+            char selected = ind2 < wg_size;
+            
+            ind = (selected) ? ind : 0;
+            ind2 = (selected) ? ind2 : 0;
+
+            char h = compose(function[ind], function[ind2]);
+            function[ind2] = (selected) ? h : function[ind2];
+         }
+
+
+
+
+
+
+
+
          function[lid] = compose(*prev_function, function[lid]);
          
          //initialize separators for characters in buffer
@@ -205,7 +237,35 @@ __kernel void findSep(
          barrier(CLK_LOCAL_MEM_FENCE);
 
          //parallel add over separators elements
-         parScanAdd(separators, wg_size);
+         
+         for(uint d=0; d<depth; ++d) {
+            int mask = (0x1 << d) - 1;
+            char selected = ((lid & mask) == mask) && (lid < wg_size/2);
+            
+            uint ind1 = (selected) ? (lid*2)+1 : 0;
+            uint offset = 0x1 << d;
+            uint ind0 = (selected) ? ind1 - offset : 0;
+            
+            separators[ind1] = (selected) ? separators[ind0] + separators[ind1] : 
+                                          separators[ind1];
+         }
+
+         for(uint stride = wg_size/4; stride>0; stride/=2) {
+            uint ind = (2*stride*(lid + 1)) - 1;
+            uint ind2 = ind + stride;
+            char selected = ind2 < wg_size;
+            
+            ind = (selected) ? ind : 0;
+            ind2 = (selected) ? ind2 : 0;
+
+            separators[ind2] = (selected) ? separators[ind] + separators[ind2] : 
+                                          separators[ind2];
+         }
+
+
+
+
+
          separators[lid] += *prev_sep;
 
          //copy final result to global memory and updating result size
