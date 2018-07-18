@@ -104,8 +104,9 @@ void read_chunk_pp(std::ifstream & file, std::string & chunk, std::string & resi
    while(std::getline(file, line)){
       if(size + line.size() > CHUNK_SIZE){
          //removing ending newline
-         chunk = chunk.substr(0, size-1);
+         //chunk = chunk.substr(0, size-1);
          residual = line;
+         file.close();
          return;
       }
 
