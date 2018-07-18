@@ -8,13 +8,14 @@
 #include <string>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
 
 #define DEVICE_TYPE CL_DEVICE_TYPE_GPU
-#define KERNEL_FILE "findSepNew.cl"
-#define INPUT_FILE "input.txt"
+#define KERNEL_FILE "findSep3.cl"
+#define INPUT_FILE "input2.txt"
 #define GLOBAL_SIZE 1024
 #define LOCAL_SIZE 64
 
@@ -116,13 +117,6 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
 
 int main(int argc, char** argv){
 
-   if(argc!=2) {
-      std::cout<<"Invalid number of inputs.\n";
-      std::cout<<"Please enter in the number of lines\n";
-      exit(1);
-   }
-
-   cl_uint nlines = atoi(argv[1]);
 
    //Get input file
    std::string chunk, residual;
@@ -167,7 +161,7 @@ int main(int argc, char** argv){
    cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, chunk.size()*sizeof(cl_uint), NULL, &err);
    error_handler(err, "Failed to create out buffer");
 
-   cl_mem out_pos  = clCreateBuffer(context, CL_MEM_READ_WRITE, nlines*sizeof(cl_uint), NULL, &err);
+   cl_mem out_pos  = clCreateBuffer(context, CL_MEM_READ_WRITE, chunk.size()*sizeof(cl_int), NULL, &err);
    
    cl_uint* pos_ptr = (cl_uint*)malloc(sizeof(cl_uint));
    *pos_ptr = 0;
@@ -187,36 +181,38 @@ int main(int argc, char** argv){
    err = clSetKernelArg(newLine, 2, sizeof(cl_uint), &chunk_size);
    err = clSetKernelArg(newLine, 3, sizeof(cl_mem), &out_pos);
    err = clSetKernelArg(newLine, 4, sizeof(cl_mem), &pos_ptr_buffer);
-   err = clSetKernelArg(newLine, 5, sizeof(cl_uint), &nlines);
    error_handler(err, "Couldn't set args for newLine");
 
    err = clEnqueueNDRangeKernel(queue, newLine, 1, NULL, &global_size, NULL, 0, NULL, NULL);
    error_handler(err, "Couldn't enqueue kernel");
    err = clFinish(queue);
-   error_handler(err, "Couldn't do clFinish");
+   error_handler(err, "Couldn't do clFinish1");
 
 
-   cl_uint * out_arr = (cl_uint*)malloc(chunk.size()*sizeof(cl_uint));
-   cl_uint * line_out_arr = (cl_uint*)malloc(nlines*sizeof(cl_uint));
+   cl_uint * out_num = (cl_uint*)malloc(sizeof(cl_uint));
+   
 
-   err = clEnqueueReadBuffer(queue, out, CL_TRUE, 0, chunk.size()*sizeof(cl_uint), out_arr, 0, NULL, NULL);
+   err = clEnqueueReadBuffer(queue, out, CL_TRUE, 0, sizeof(cl_uint), out_num, 0, NULL, NULL);
    error_handler(err, "Couldn't read buffer");
-   err = clEnqueueReadBuffer(queue, out_pos, CL_TRUE, 0, nlines*sizeof(cl_uint), line_out_arr, 0, NULL, NULL);
+   
+   unsigned int line_num = out_num[0];
+   line_num++;
+   cl_int * line_out_arr = (cl_int*)malloc(line_num*sizeof(cl_int));
+
+   err = clEnqueueReadBuffer(queue, out_pos, CL_TRUE, 0, line_num*sizeof(cl_int), line_out_arr, 0, NULL, NULL);
    err = clFinish(queue);
-   error_handler(err, "Couldn't do clFinish");
+   error_handler(err, "Couldn't do clFinish2");
 
 
-   for(size_t i=0; i<chunk.size(); ++i){
-      std::cout << out_arr[i] << " ";
-   }
-   cout << endl << endl;
-
-   for(size_t i=0; i<nlines; ++i) {
-      std::cout << line_out_arr[i] << " ";
+   vector<int> line_out_vec(line_out_arr, line_out_arr+line_num);
+   sort(line_out_vec.begin(), line_out_vec.end());
+   for(size_t i=0; i<line_num; ++i) {
+      std::cout << line_out_vec[i] << " ";
    }
    cout<<endl;
 
-   free(out_arr);
+   free(out_num);
+   free(line_out_arr);
 
    clReleaseMemObject(input_string);
    clReleaseMemObject(out);
