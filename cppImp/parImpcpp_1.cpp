@@ -209,7 +209,18 @@ int main(int argc, char** argv){
    for(size_t i=0; i<line_num; ++i) {
       std::cout << line_out_vec[i] << " ";
    }
-   cout<<endl;
+   cout<<endl<<endl;
+
+   vector<int> input_pos;
+   input_pos.push_back(line_out_vec[0]);
+   for(uint i = 1; i<line_num; ++i) {
+      input_pos.push_back(line_out_vec[i]);
+      input_pos.push_back(line_out_vec[i]+1);
+   }
+   for(size_t i=0; i<(line_num-1)*2; ++i) {
+      std::cout << input_pos[i] << " ";
+   }
+   cout<<endl<<endl;
 
    free(out_num);
    free(line_out_arr);
