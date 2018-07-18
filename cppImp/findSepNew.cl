@@ -15,6 +15,8 @@ inline char compose(char f, char g) {
 	return h;
 }
 
+
+//Not sure this will work because due to unpredictable runtime ordering of PE's
 /* Finds newline characters and marks them*/
 __kernel void newLine(__global char * input, __global uint * output, uint size,
 		__global int* out_pos, __global uint* pos_ptr, uint nlines){
@@ -35,6 +37,27 @@ __kernel void newLine(__global char * input, __global uint * output, uint size,
 	      
 	   }
 	}
+}
+
+__kernel void newLineAlt(__global char * input, __global uint * output){
+   uint gid = get_global_id(0);
+   output[gid] = (input[gid] == NEWLINE);
+}
+
+__kernel void getLinePos(__global uint * data, __global uint * output){
+   uint gid = get_global_id(0);
+   if(gid == 0){
+      if(data[0]){
+         output[data[1]] = 0;
+         output[data[2]] = 1;
+      }
+   }
+   else{
+      if(data[gid] != data[gid-1]){
+         output[(2*data[gid-1]) + 1] = gid;
+         output[2*data[gid]] = gid + 1;
+      }
+   }
 }
 
 /* addScanStep and addPostScanStep used only for finding the postions
@@ -137,17 +160,17 @@ __kernel void findSep(
    __global uint* pos_ptr,       //points to a position pair in input_pos
    __local uint* separators,     //array for valid separators
    __global uint* finalResults,  //array to hold final scan results
-   __global uint* result_sizes,   //size of the final result for each line
+   __global uint* result_sizes,  //sizes of the final result for each line
    __local char* lstring,        //array to hold the local string
    __local char* escape,         //array to hold locations of escape characters
    __local char* function,       //array to calculate the function
-   uint lines,          //number of lines in input_string
-   uint len,          //length of current line
-   __local uint* curr_pos,        //holds copy of the current line pointer for work group
-   __local char* prev_escape,          //holds the escape value of the last element in for previous buffer
-   __local char* prev_function,        //holds the function value of the last element in for previous buffer
-   __local uint* prev_sep,             //holds the separators value of the last element in for previous buffer
-   __local char* elems_scanned,   //tracks the number if elements scanned
+   uint lines,                   //number of lines in input_string
+   __local uint* len,            //length of current line
+   __local uint* curr_pos,       //holds copy of the current line pointer for work group
+   __local char* prev_escape,    //holds the escape value of the last element in for previous buffer
+   __local char* prev_function,  //holds the function value of the last element in for previous buffer
+   __local uint* prev_sep,       //holds the separators value of the last element in for previous buffer
+   __local char* elems_scanned,  //tracks the number if elements scanned
    __local char* first_char      //denotes first character of a line is delimited
 	) {
    
@@ -160,10 +183,10 @@ __kernel void findSep(
       //setting up for new line
       if(lid == 0){
 			*curr_pos = atomic_inc(pos_ptr) * 2;
-			if(*curr_pos>=lines*2) {
+			if((*curr_pos) >= lines*2) {
 		   		return;
 			}
-			len = input_pos[*curr_pos + 1] - input_pos[*curr_pos];
+			*len = input_pos[(*curr_pos) + 1] - input_pos[*curr_pos];
 			*first_char = (input_string[input_pos[*curr_pos]] == OPEN);
 
 			*prev_escape = 0;
@@ -172,11 +195,11 @@ __kernel void findSep(
 		}
       barrier(CLK_LOCAL_MEM_FENCE);
 
-      while(*elems_scanned < len){
+      while((*elems_scanned) < (*len)){
 
          //copy elements of input string from global memory to local and set function
-         uint index = *curr_pos + *elems_scanned + lid;
-         lstring[lid] = (index < len) ? input_string[index] : ' ';
+         uint index = (*curr_pos) + (*elems_scanned) + lid;
+         lstring[lid] = (index < (*len)) ? input_string[index] : ' ';
          barrier(CLK_LOCAL_MEM_FENCE);
 
          //initialize function for characters in buffer
@@ -205,13 +228,13 @@ __kernel void findSep(
          //copy final result to global memory and updating result size
          if(lid == 0){
             if(*prev_sep != separators[lid]){
-               finalResults[*curr_pos + separators[lid]] = index;
-               atomic_inc(&result_sizes[*curr_pos/2]);
+               finalResults[(*curr_pos) + separators[lid]] = index;
+               atomic_inc(&result_sizes[(*curr_pos)/2]);
             }
          }
          else if(separators[lid] != separators[lid-1]){
-               finalResults[*curr_pos + separators[lid]] = index;
-               atomic_inc(&result_sizes[*curr_pos/2]);
+               finalResults[(*curr_pos) + separators[lid]] = index;
+               atomic_inc(&result_sizes[(*curr_pos)/2]);
          }
 
          //save results of last element
@@ -220,7 +243,7 @@ __kernel void findSep(
 			   *prev_escape = escape[lid];
 			   *prev_function = function[lid];
 			   *prev_sep = separators[lid];
-			   *elems_scanned += wg_size;
+			   (*elems_scanned) += wg_size;
 		   }
 
          barrier(CLK_LOCAL_MEM_FENCE);
