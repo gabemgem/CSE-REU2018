@@ -155,12 +155,14 @@ void pad_string(char** str, cl_int* len){
    *len = new_len;
 }
 
-cl_uint lg(int val){
-   cl_uint out = 0;
-   while(val > 1){
-      val >>= 1;
+cl_uint lg(cl_uint val){
+   cl_uint out = 0, cpy = val;
+   while(cpy > 1){
+      cpy >>= 1;
       ++out;
    }
+   if((1 << out) < val) ++out;
+
    return out;
 }
 
