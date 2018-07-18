@@ -17,18 +17,22 @@ inline char compose(char f, char g) {
 
 /* Finds newline characters and marks them*/
 __kernel void newLine(__global char * input, __global uint * output, uint size,
-		__global uint* out_pos, __global uint* pos_ptr, uint nlines){
+		__global int* out_pos, __global uint* pos_ptr, uint nlines){
    uint gid = get_global_id(0);
    uint gsize = get_global_size(0);
    for(uint i = 0; i < size; i+=gsize) {
 	   if(gid+i < size){
 	      output[gid+i] = (input[gid+i] == NEWLINE);
+	      //out_pos[gid+i] = (input[gid+i] == NEWLINE) ? gid+i : 0;
+	      
 	      if(input[gid+i] == NEWLINE) {
-	      	out_pos[atomic_inc(pos_ptr)];
-	      	if(*pos_ptr>nlines) {
+	      	out_pos[atomic_inc(pos_ptr)]=gid+i;
+	      	
+	      	if((*pos_ptr)>nlines) {
 	      		return;
 	      	}
 	      }
+	      
 	   }
 	}
 }
