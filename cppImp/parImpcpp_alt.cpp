@@ -249,11 +249,15 @@ int main(){
             &global_size, &local_size, 0, NULL, NULL);
    error_handler(err, "Failed to enqueue 'getLinePos' kernel");
 
+   cl_uint posTracker = 0;
+   cl_mem pos_ptr = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+            CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), &posTracker, &err);
+   error_handler(err, "Failed to create 'pos_ptr' buffer");
 
    //Running findSep
    errors.push_back(clSetKernelArg(findSep, 0, sizeof(cl_mem), &inputString));      //input_string
    errors.push_back(clSetKernelArg(findSep, 1, sizeof(cl_mem), &posBuff));          //input_pos
-   errors.push_back(clSetKernelArg(findSep, 2, sizeof(cl_mem), &inputString));      //pos_ptr
+   errors.push_back(clSetKernelArg(findSep, 2, sizeof(cl_mem), &pos_ptr));          //pos_ptr
    errors.push_back(clSetKernelArg(findSep, 3, sizeof(cl_uint)*chunkSize, NULL));   //separators
    errors.push_back(clSetKernelArg(findSep, 4, sizeof(cl_mem), &finalRes));         //finalResults
    errors.push_back(clSetKernelArg(findSep, 5, sizeof(cl_mem), &resSizes));         //result_sizes
@@ -266,7 +270,7 @@ int main(){
    errors.push_back(clSetKernelArg(findSep, 12, sizeof(cl_uint), NULL));            //prev_escape
    errors.push_back(clSetKernelArg(findSep, 13, sizeof(cl_char), NULL));            //prev_function
    errors.push_back(clSetKernelArg(findSep, 14, sizeof(cl_uint), NULL));            //prev_sep
-   errors.push_back(clSetKernelArg(findSep, 15, sizeof(cl_char), NULL));            //elems_scanned
+   errors.push_back(clSetKernelArg(findSep, 15, sizeof(cl_uint), NULL));            //elems_scanned
    errors.push_back(clSetKernelArg(findSep, 16, sizeof(cl_char), NULL));            //first_char
    error_handler(errors, "Failed to set a kernel arguement for 'findSep'");
 
@@ -291,22 +295,15 @@ int main(){
             sizeof(cl_uint)*posSize, pos, 0, NULL, NULL);
    error_handler(err, "Failed to read 'posBuff' buffer");
 
-   cout << c_chunk << endl;
-   
-   for(size_t i=0; i<numLines; ++i){
-      cout << sizes[i] << " ";
-   }
-   cout << endl;
-
-   //Printing out results
+   // Printing out results
    for(size_t i=0; i<posSize; i+=2){
       int currStart = pos[i];
       int currSize = sizes[i/2];
       for(size_t j=0; j<currSize; ++j){
          cout << commPos[currStart + j] << " ";
       }
+      cout << endl;
    }
-   cout << endl;
 
    free(commPos);
    free(sizes);
@@ -318,6 +315,7 @@ int main(){
    clReleaseMemObject(posBuff);
    clReleaseMemObject(finalRes);
    clReleaseMemObject(resSizes);
+   clReleaseMemObject(pos_ptr);
 
    clReleaseKernel(newLineAlt);
    clReleaseKernel(getLinePos);
