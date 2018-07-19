@@ -123,7 +123,7 @@ int main(int argc, char** argv){
    std::ifstream inputFile(INPUT_FILE);
    read_chunk_pp(inputFile, chunk, residual);
 
-   cl_char* c_chunk = (cl_char*)malloc(chunk.size());
+   cl_char* c_chunk = (cl_char*)malloc(chunk.size()*sizeof(cl_char));
    for(unsigned int i=0; i<chunk.size(); ++i){
       c_chunk[i] = chunk[i];
       std::cout<<c_chunk[i];
@@ -156,7 +156,7 @@ int main(int argc, char** argv){
 
    //Create buffers
    cl_mem input_string = clCreateBuffer(context, CL_MEM_READ_WRITE |
-            CL_MEM_COPY_HOST_PTR, chunk.size(), c_chunk, &err);
+            CL_MEM_COPY_HOST_PTR, chunk.size()*sizeof(cl_char), c_chunk, &err);
 
    cl_mem out = clCreateBuffer(context, CL_MEM_READ_WRITE, chunk.size()*sizeof(cl_uint), NULL, &err);
    error_handler(err, "Failed to create out buffer");
@@ -172,6 +172,8 @@ int main(int argc, char** argv){
    //Create kernels
    cl_kernel newLine = clCreateKernel(program, "newLine", &err);
    error_handler(err, "Failed to create newLine kernel");
+   cl_kernel findSep = clCreateKernel(program, "findSep", &err);
+   error_handler(err, "Failed to create findSep kernel");
 
 
    
@@ -195,7 +197,7 @@ int main(int argc, char** argv){
    err = clEnqueueReadBuffer(queue, out, CL_TRUE, 0, sizeof(cl_uint), out_num, 0, NULL, NULL);
    error_handler(err, "Couldn't read buffer");
    
-   unsigned int line_num = out_num[0];
+   cl_uint line_num = out_num[0];
    line_num++;
    cl_int * line_out_arr = (cl_int*)malloc(line_num*sizeof(cl_int));
 
@@ -204,29 +206,85 @@ int main(int argc, char** argv){
    error_handler(err, "Couldn't do clFinish2");
 
 
-   vector<int> line_out_vec(line_out_arr, line_out_arr+line_num);
+   vector<cl_int> line_out_vec(line_out_arr, line_out_arr+line_num);
    sort(line_out_vec.begin(), line_out_vec.end());
    for(size_t i=0; i<line_num; ++i) {
       std::cout << line_out_vec[i] << " ";
    }
    cout<<endl<<endl;
 
-   vector<int> input_pos;
-   input_pos.push_back(line_out_vec[0]);
+   vector<cl_int> input_pos_vec;
+   input_pos_vec.push_back(line_out_vec[0]);
    for(uint i = 1; i<line_num; ++i) {
-      input_pos.push_back(line_out_vec[i]);
-      input_pos.push_back(line_out_vec[i]+1);
+      input_pos_vec.push_back(line_out_vec[i]);
+      input_pos_vec.push_back(line_out_vec[i]+1);
    }
    for(size_t i=0; i<(line_num-1)*2; ++i) {
-      std::cout << input_pos[i] << " ";
+      std::cout << input_pos_vec[i] << " ";
+   }
+   cout<<endl<<endl;
+   cl_int* input_pos = (cl_int*)malloc(input_pos_vec.size()*sizeof(cl_int));
+   std::copy(input_pos_vec.begin(), input_pos_vec.end(), input_pos);
+
+   //Buffers for findSep kernel
+   cl_mem input_pos_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+                           CL_MEM_COPY_HOST_PTR, input_pos_vec.size()*sizeof(cl_int), input_pos, &err);
+   cl_mem final_result_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
+                                 chunk.size()*sizeof(cl_uint), NULL, &err);
+   cl_mem result_sizes_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 
+                                 input_pos_vec.size()*sizeof(cl_uint), NULL, &err);
+   error_handler(err, "Failed to create buffers");
+   
+   cl_uint nlines = input_pos_vec.size()/2;
+   cl_mem pos_ptr_buffer2 = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+      CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), pos_ptr, &err); 
+   error_handler(err);
+   //Set kernel args for findSep
+   err = clSetKernelArg(findSep, 0, sizeof(cl_mem), &input_string);//input_string
+   err = clSetKernelArg(findSep, 1, sizeof(cl_mem), &input_pos_buffer);//input_pos
+   err = clSetKernelArg(findSep, 2, sizeof(cl_mem), &pos_ptr_buffer2);//pos_ptr
+   err = clSetKernelArg(findSep, 3, local_size*sizeof(cl_uint), NULL);//separators
+   err = clSetKernelArg(findSep, 4, sizeof(cl_mem), &final_result_buffer);//finalResults
+   err = clSetKernelArg(findSep, 5, sizeof(cl_mem), &result_sizes_buffer);//result_sizes
+   err = clSetKernelArg(findSep, 6, local_size*sizeof(cl_char), NULL);//lstring
+   err = clSetKernelArg(findSep, 7, local_size*sizeof(cl_char), NULL);//escape
+   err = clSetKernelArg(findSep, 8, local_size*sizeof(cl_char), NULL);//function
+   err = clSetKernelArg(findSep, 9, sizeof(cl_uint), &nlines);//lines
+   err = clSetKernelArg(findSep, 10, sizeof(cl_uint), NULL);//len
+   err = clSetKernelArg(findSep, 11, sizeof(cl_uint), NULL);//curr_pos
+   err = clSetKernelArg(findSep, 12, sizeof(cl_char), NULL);//prev_escape
+   err = clSetKernelArg(findSep, 13, sizeof(cl_char), NULL);//prev_function
+   err = clSetKernelArg(findSep, 14, sizeof(cl_uint), NULL);//prev_sep
+   err = clSetKernelArg(findSep, 15, sizeof(cl_char), NULL);//elems_scanned
+   err = clSetKernelArg(findSep, 16, sizeof(cl_char), NULL);//first_char
+   error_handler(err, "Couldn't set findSep args");
+
+   err = clEnqueueNDRangeKernel(queue, findSep, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+   error_handler(err, "Couldn't enqueue kernel");
+   err = clFinish(queue);
+   error_handler(err, "Couldn't do clFinish3");
+
+   cl_uint* finalResults = (cl_uint*)malloc(chunk.size()*sizeof(cl_char));
+   err = clEnqueueReadBuffer(queue, final_result_buffer, CL_TRUE, 0, chunk.size()*sizeof(cl_char), finalResults, 0, NULL, NULL);
+
+   for(cl_uint i = 0; i<chunk.size(); ++i) {
+      cout<<finalResults[i]<<" ";
    }
    cout<<endl<<endl;
 
+   free(pos_ptr);
    free(out_num);
    free(line_out_arr);
+   free(finalResults);
 
    clReleaseMemObject(input_string);
    clReleaseMemObject(out);
+   clReleaseMemObject(input_pos_buffer);
+   clReleaseMemObject(final_result_buffer);
+   clReleaseMemObject(result_sizes_buffer);
+   clReleaseMemObject(pos_ptr_buffer);
+   clReleaseMemObject(pos_ptr_buffer2);
+
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseDevice(device);

@@ -139,7 +139,7 @@ inline void parScanAdd(__local uint* data, uint size){
    (ex: setting position and saving previous values) */
 __kernel void findSep(
    __global char* input_string,  //array with the input
-   __global uint* input_pos,     //array of start/end position pairs for each line
+   __global int* input_pos,     //array of start/end position pairs for each line
    __global uint* pos_ptr,       //points to a position pair in input_pos
    __local uint* separators,     //array for valid separators
    __global uint* finalResults,  //array to hold final scan results
@@ -148,7 +148,7 @@ __kernel void findSep(
    __local char* escape,         //array to hold locations of escape characters
    __local char* function,       //array to calculate the function
    uint lines,          //number of lines in input_string
-   uint len,          //length of current line
+   __local uint* len,          //length of current line
    __local uint* curr_pos,        //holds copy of the current line pointer for work group
    __local char* prev_escape,          //holds the escape value of the last element in for previous buffer
    __local char* prev_function,        //holds the function value of the last element in for previous buffer
@@ -166,10 +166,10 @@ __kernel void findSep(
       //setting up for new line
       if(lid == 0){
 			*curr_pos = atomic_inc(pos_ptr) * 2;
-			if(*curr_pos>=lines*2) {
+			if(*curr_pos>=(lines)*2) {
 		   		return;
 			}
-			len = input_pos[*curr_pos + 1] - input_pos[*curr_pos];
+			*len = input_pos[*curr_pos + 1] - input_pos[*curr_pos];
 			*first_char = (input_string[input_pos[*curr_pos]] == OPEN);
 
 			*prev_escape = 0;
@@ -178,11 +178,11 @@ __kernel void findSep(
 		}
       barrier(CLK_LOCAL_MEM_FENCE);
 
-      while(*elems_scanned < len){
+      while(*elems_scanned < *len){
 
          //copy elements of input string from global memory to local and set function
          uint index = *curr_pos + *elems_scanned + lid;
-         lstring[lid] = (index < len) ? input_string[index] : ' ';
+         lstring[lid] = (index < *len) ? input_string[index] : ' ';
          barrier(CLK_LOCAL_MEM_FENCE);
 
          //initialize function for characters in buffer

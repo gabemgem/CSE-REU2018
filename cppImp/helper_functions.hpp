@@ -162,7 +162,7 @@ cl_uint lg(cl_uint val){
       cpy >>= 1;
       ++out;
    }
-   if((1 << out) < val) ++out;
+   if((1 << out) < val) {++out;}
 
    return out;
 }
