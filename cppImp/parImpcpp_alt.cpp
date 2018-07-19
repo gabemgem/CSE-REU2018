@@ -114,11 +114,16 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
 }
 
 
-int main(){
+int main(int argc, char** argv){
+
+   std::string ifile = INPUT_FILE;
+   if(argc==2) {
+      ifile = argv[1];
+   }
 
    //Get input file
    std::string chunk, residual;
-   std::ifstream inputFile(INPUT_FILE);
+   std::ifstream inputFile(ifile);
    read_chunk_pp(inputFile, chunk, residual);
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
