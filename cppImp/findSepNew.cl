@@ -172,7 +172,7 @@ __kernel void findSep(
    __local char* prev_escape,    //holds the escape value of the last element in for previous buffer
    __local char* prev_function,  //holds the function value of the last element in for previous buffer
    __local uint* prev_sep,       //holds the separators value of the last element in for previous buffer
-   __local char* elems_scanned,  //tracks the number if elements scanned
+   __local uint* elems_scanned,  //tracks the number if elements scanned
    __local char* first_char      //denotes first character of a line is delimited
 	) {
    
@@ -185,23 +185,21 @@ __kernel void findSep(
       //setting up for new line
       if(lid == 0){
 			*curr_pos = atomic_inc(pos_ptr) * 2;
-			if((*curr_pos) >= lines*2) {
-		   		return;
-			}
 			*len = input_pos[(*curr_pos) + 1] - input_pos[*curr_pos];
 			*first_char = (input_string[input_pos[*curr_pos]] == OPEN);
 
 			*prev_escape = 0;
 			*prev_function = IDENTITY;
 			*prev_sep = 0;
+         *elems_scanned = 0;
 		}
       barrier(CLK_LOCAL_MEM_FENCE);
 
       while((*elems_scanned) < (*len)){
 
          //copy elements of input string from global memory to local and set function
-         uint index = (*curr_pos) + (*elems_scanned) + lid;
-         lstring[lid] = (index < (*len)) ? input_string[index] : ' ';
+         uint index = input_pos[*curr_pos] + (*elems_scanned) + lid;
+         lstring[lid] = (((*elems_scanned) + lid) < (*len)) ? input_string[index] : ' ';
          barrier(CLK_LOCAL_MEM_FENCE);
 
          //initialize function for characters in buffer
@@ -220,7 +218,7 @@ __kernel void findSep(
          
          //initialize separators for characters in buffer
          separators[lid] = (lstring[lid] == SEP) &&
-                           (*first_char) ? ((function[lid] & 2) >> 1) : (function[lid] & 1);
+                           !((*first_char) ? ((function[lid] & 2) >> 1) : (function[lid] & 1));
          barrier(CLK_LOCAL_MEM_FENCE);
 
          //parallel add over separators elements
@@ -230,15 +228,15 @@ __kernel void findSep(
          //copy final result to global memory and updating result size
          if(lid == 0){
             if(*prev_sep != separators[lid]){
-               finalResults[(*curr_pos) + separators[lid]] = index;
+               finalResults[input_pos[*curr_pos] + *prev_sep] = index;
                atomic_inc(&(result_sizes[(*curr_pos)/2]));
             }
          }
          else if(separators[lid] != separators[lid-1]){
-               finalResults[(*curr_pos) + separators[lid]] = index;
+               finalResults[input_pos[*curr_pos] + separators[lid-1]] = index;
                atomic_inc(&(result_sizes[(*curr_pos)/2]));
          }
-
+         
          //save results of last element
          //increase elems_scanned by the work group size
          if(lid == wg_size - 1) {
