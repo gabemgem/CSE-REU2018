@@ -8,7 +8,7 @@
 #include <string>
 #include <CL/cl.hpp>
 
-#define CHUNK_SIZE 1024
+#define CHUNK_SIZE 2048
 
 /* Returns the next power of 2 from old */
 cl_int pad_num(cl_int old) {
