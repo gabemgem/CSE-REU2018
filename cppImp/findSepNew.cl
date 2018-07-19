@@ -16,7 +16,6 @@ inline char compose(char f, char g) {
 }
 
 
-//Not sure this will work because due to unpredictable runtime ordering of PE's
 /* Finds newline characters and marks them*/
 __kernel void newLine(__global char * input, __global uint * output, uint size,
 		__global int* out_pos, __global uint* pos_ptr, uint nlines){
@@ -39,6 +38,7 @@ __kernel void newLine(__global char * input, __global uint * output, uint size,
 	}
 }
 
+/* Marks the position of newline charaters */
 __kernel void newLineAlt(__global char * input, __global uint * output, uint size){
    uint gid = get_global_id(0);
    if(gid < size){
@@ -46,6 +46,9 @@ __kernel void newLineAlt(__global char * input, __global uint * output, uint siz
    }
 }
 
+/* Records the start/end of each line after performing a
+   parallel scan add on the output of newLineAlt;
+   assumed that first elem is 0 and the last is "chunk size" - 1 */
 __kernel void getLinePos(__global uint * data, __global uint * output, uint size){
    uint gid = get_global_id(0);
    if(gid < size){
@@ -92,6 +95,8 @@ __kernel void addPostScanStep(__global uint* data, uint size, uint stride){
    data[ind2] = (selected) ? h : data[ind2];
 }
 
+/* Performs a parallel scan composition of the delimiter
+   finding function */
 inline void parScanCompose(__local char* func, uint size){
    uint lid = get_local_id(0);
    uint ind1 = (lid*2)+1;
@@ -122,6 +127,7 @@ inline void parScanCompose(__local char* func, uint size){
 
 }
 
+/* Performs a parallel scan add */
 inline void parScanAdd(__local uint* data, uint size){
    uint lid = get_local_id(0);
    uint ind1 = (lid*2)+1;
@@ -194,7 +200,8 @@ __kernel void findSep(
          *elems_scanned = 0;
 		}
       barrier(CLK_LOCAL_MEM_FENCE);
-
+      
+      //parsing line
       while((*elems_scanned) < (*len)){
 
          //copy elements of input string from global memory to local and set function
@@ -236,7 +243,7 @@ __kernel void findSep(
                finalResults[input_pos[*curr_pos] + separators[lid-1]] = index;
                atomic_inc(&(result_sizes[(*curr_pos)/2]));
          }
-         
+
          //save results of last element
          //increase elems_scanned by the work group size
          if(lid == wg_size - 1) {
