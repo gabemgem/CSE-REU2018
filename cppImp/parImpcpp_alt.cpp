@@ -114,16 +114,7 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
 }
 
 
-int main(int argc, char** argv){
-
-   if(argc!=2) {
-      std::cout<<"Invalid number of inputs.\n";
-      std::cout<<"Please enter in the number of lines\n";
-      exit(1);
-   }
-
-   cl_uint nlines = atoi(argv[1]);
-
+int main(){
 
    //Get input file
    std::string chunk, residual;
@@ -132,10 +123,13 @@ int main(int argc, char** argv){
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
+   // cl_char* c_chunk = (cl_char*)malloc(chunkSize);
+   // for(int i=0; i<chunkSize; ++i){
+   //    c_chunk[i] = chunk[i];
+   // }
 
-   size_t global_size = chunkSize;
-   size_t local_size = LOCAL_SIZE;
-
+   size_t global_size = pad_num(chunkSize);
+   size_t local_size = (LOCAL_SIZE <= global_size) ? LOCAL_SIZE : global_size;
 
    cl_int err;
    vector<cl_int> errors;
@@ -153,7 +147,7 @@ int main(int argc, char** argv){
 
 
    //Create buffers
-   cl_mem inputString = clCreateBuffer(context, CL_MEM_READ_WRITE |
+   cl_mem inputString = clCreateBuffer(context, CL_MEM_READ_ONLY |
             CL_MEM_COPY_HOST_PTR, chunkSize, c_chunk, &err);
    error_handler(err, "Failed to create 'inputString' buffer");
 
@@ -186,15 +180,16 @@ int main(int argc, char** argv){
    //Running newLineAlt
    errors.push_back(clSetKernelArg(newLineAlt, 0, sizeof(cl_mem), &inputString));
    errors.push_back(clSetKernelArg(newLineAlt, 1, sizeof(cl_mem), &newLineBuff));
+   errors.push_back(clSetKernelArg(newLineAlt, 2, sizeof(cl_uint), &chunkSize));
    error_handler(errors, "Failed to set a kernel arguement for 'newLineAlt'");
 
    err = clEnqueueNDRangeKernel(queue, newLineAlt, 1, NULL, 
             &global_size, &local_size, 0, NULL, NULL);
    error_handler(err, "Failed to enqueue 'newLineAlt' kernel");
-
+   
 
    //Running addScanStep
-   cl_uint depth = lg(chunkSize);
+   cl_uint depth = lg(global_size);
    for(cl_uint d=0; d < depth; ++d){
       errors.push_back(clSetKernelArg(addScanStep, 0, sizeof(cl_mem), &newLineBuff));
       errors.push_back(clSetKernelArg(addScanStep, 1, sizeof(cl_uint), &chunkSize));
@@ -206,9 +201,8 @@ int main(int argc, char** argv){
       error_handler(err, "Failed to enqueue 'addScanStep' kernel");
    }
 
-
    //Running addPostScanStep
-   for(cl_uint stride = chunkSize/4; stride > 0; stride /= 2){
+   for(cl_uint stride = global_size/4; stride > 0; stride /= 2){
       errors.push_back(clSetKernelArg(addPostScanStep, 0, sizeof(cl_mem), &newLineBuff));
       errors.push_back(clSetKernelArg(addPostScanStep, 1, sizeof(cl_uint), &chunkSize));
       errors.push_back(clSetKernelArg(addPostScanStep, 2, sizeof(cl_uint), &stride));
@@ -219,6 +213,7 @@ int main(int argc, char** argv){
       error_handler(err, "Failed to enqueue 'addPostScanStep' kernel");
    }
 
+   clFinish(queue);
 
    //Setting up buffers for line positions and final result sizes
    cl_uint * newLineArr = (cl_uint *)malloc(sizeof(cl_uint)*chunkSize);
@@ -228,10 +223,15 @@ int main(int argc, char** argv){
 
    size_t numLines = newLineArr[chunkSize-1] + 1;
    size_t posSize = 2 * numLines;
+
    free(newLineArr);
    
-   cl_mem posBuff = clCreateBuffer(context, CL_MEM_READ_WRITE, 
-            sizeof(cl_uint)*posSize, NULL, &err);
+   cl_uint * pos = (cl_uint *)calloc(posSize, sizeof(cl_uint));
+   pos[0] = 0;
+   pos[posSize-1] = chunkSize;
+
+   cl_mem posBuff = clCreateBuffer(context, CL_MEM_READ_WRITE 
+            | CL_MEM_COPY_HOST_PTR, sizeof(cl_uint)*posSize, pos, &err);
    error_handler(err, "Failed to create 'posBuff' buffer");
 
    cl_mem resSizes = clCreateBuffer(context, CL_MEM_READ_WRITE, 
@@ -242,6 +242,7 @@ int main(int argc, char** argv){
    //Running getLinePos
    errors.push_back(clSetKernelArg(getLinePos, 0, sizeof(cl_mem), &newLineBuff));
    errors.push_back(clSetKernelArg(getLinePos, 1, sizeof(cl_mem), &posBuff));
+   errors.push_back(clSetKernelArg(getLinePos, 2, sizeof(cl_uint), &chunkSize));
    error_handler(errors, "Failed to set a kernel arguement for 'getLinePos'");
 
    err = clEnqueueNDRangeKernel(queue, getLinePos, 1, NULL, 
@@ -250,8 +251,6 @@ int main(int argc, char** argv){
 
 
    //Running findSep
-   global_size = GLOBAL_SIZE;
-
    errors.push_back(clSetKernelArg(findSep, 0, sizeof(cl_mem), &inputString));      //input_string
    errors.push_back(clSetKernelArg(findSep, 1, sizeof(cl_mem), &posBuff));          //input_pos
    errors.push_back(clSetKernelArg(findSep, 2, sizeof(cl_mem), &inputString));      //pos_ptr
@@ -276,6 +275,43 @@ int main(int argc, char** argv){
    error_handler(err, "Failed to enqueue 'findSep' kernel");
 
    
+   //Reading from results buffers
+   cl_uint * commPos = (cl_uint *)malloc(sizeof(cl_uint)*chunkSize);
+   cl_uint * sizes = (cl_uint *)malloc(sizeof(cl_uint)*numLines);
+
+   err = clEnqueueReadBuffer(queue, finalRes, CL_TRUE, 0, 
+            sizeof(cl_uint)*chunkSize, commPos, 0, NULL, NULL);
+   error_handler(err, "Failed to read 'finalRes' buffer");
+   
+   err = clEnqueueReadBuffer(queue, resSizes, CL_TRUE, 0, 
+            sizeof(cl_uint)*numLines, sizes, 0, NULL, NULL);
+   error_handler(err, "Failed to read 'resSizes' buffer");
+
+   err = clEnqueueReadBuffer(queue, posBuff, CL_TRUE, 0, 
+            sizeof(cl_uint)*posSize, pos, 0, NULL, NULL);
+   error_handler(err, "Failed to read 'posBuff' buffer");
+
+   cout << c_chunk << endl;
+   
+   for(size_t i=0; i<numLines; ++i){
+      cout << sizes[i] << " ";
+   }
+   cout << endl;
+
+   //Printing out results
+   for(size_t i=0; i<posSize; i+=2){
+      int currStart = pos[i];
+      int currSize = sizes[i/2];
+      for(size_t j=0; j<currSize; ++j){
+         cout << commPos[currStart + j] << " ";
+      }
+   }
+   cout << endl;
+
+   free(commPos);
+   free(sizes);
+   free(pos);
+
    //Freeing CL Objects
    clReleaseMemObject(inputString);
    clReleaseMemObject(newLineBuff);

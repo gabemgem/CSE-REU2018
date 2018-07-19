@@ -39,21 +39,23 @@ __kernel void newLine(__global char * input, __global uint * output, uint size,
 	}
 }
 
-__kernel void newLineAlt(__global char * input, __global uint * output){
+__kernel void newLineAlt(__global char * input, __global uint * output, uint size){
    uint gid = get_global_id(0);
-   output[gid] = (input[gid] == NEWLINE);
+   if(gid < size){
+      output[gid] = (input[gid] == NEWLINE);
+   }
 }
 
-__kernel void getLinePos(__global uint * data, __global uint * output){
+__kernel void getLinePos(__global uint * data, __global uint * output, uint size){
    uint gid = get_global_id(0);
-   if(gid == 0){
-      if(data[0]){
-         output[data[1]] = 0;
-         output[data[2]] = 1;
+   if(gid < size){
+      if(gid == 0){
+         if(data[0]){
+            output[1] = 0;
+            output[2] = 1;
+         }
       }
-   }
-   else{
-      if(data[gid] != data[gid-1]){
+      else if(data[gid] != data[gid-1]){
          output[(2*data[gid-1]) + 1] = gid;
          output[2*data[gid]] = gid + 1;
       }
@@ -229,12 +231,12 @@ __kernel void findSep(
          if(lid == 0){
             if(*prev_sep != separators[lid]){
                finalResults[(*curr_pos) + separators[lid]] = index;
-               atomic_inc(&result_sizes[(*curr_pos)/2]);
+               atomic_inc(&(result_sizes[(*curr_pos)/2]));
             }
          }
          else if(separators[lid] != separators[lid-1]){
                finalResults[(*curr_pos) + separators[lid]] = index;
-               atomic_inc(&result_sizes[(*curr_pos)/2]);
+               atomic_inc(&(result_sizes[(*curr_pos)/2]));
          }
 
          //save results of last element
