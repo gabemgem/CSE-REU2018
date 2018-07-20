@@ -30,7 +30,16 @@ int main(int argc, char** argv){
    //Get input file
    std::string chunk, residual;
    std::ifstream inputFile(ifile);
+<<<<<<< HEAD
+   if(!inputFile.is_open()) {
+      exit(1);
+   }
+   std::string garbage;
+   std::getline(inputFile, garbage);
+   read_chunk_pp(inputFile, chunk, residual);
+=======
    read_chunk(inputFile, chunk, residual);
+>>>>>>> 4df3abb509cbbf086f353ee45dd4f4def6899c33
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
@@ -82,6 +91,9 @@ int main(int argc, char** argv){
    
    cl_kernel findSep = clCreateKernel(program, "findSep", &err);
    error_handler(err, "Failed to create 'findSep' kernel");
+
+   cl_kernel flipCoords = clCreateKernel(program, "flipCoords", &err);
+   error_handler(err, "Failed to create 'flipCoords' kernel");
 
 
    //Running newLineAlt
@@ -207,10 +219,65 @@ int main(int argc, char** argv){
    for(size_t i=0; i<posSize; i+=2){
       int currStart = pos[i];
       int currSize = sizes[i/2];
+      cout<<currStart<<": ";
       for(size_t j=0; j<currSize; ++j){
          cout << commPos[currStart + j] << " ";
       }
       cout << endl;
+   }
+
+   for(size_t i=0; i<posSize; i+=2) {
+      cl_int currStart = pos[i];
+      cl_uint currSize = sizes[i/2]-7;//7 irrelevant commas
+      cl_uint finalSize = (pos[i+1]-commPos[currStart+7]-1);
+      cl_uint* currCommas = &commPos[currStart+7];
+      currCommas[0]+=2;
+      cl_uint posTracker2 = 0;
+      cl_mem pos_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+            CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), &posTracker2, &err);
+      error_handler(err, "Failed to create 'pos_ptr' buffer");
+      cl_mem startPos = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+            CL_MEM_COPY_HOST_PTR, currSize*sizeof(cl_uint), &currCommas, &err);
+      error_handler(err, "Failed to create 'startPos' buffer");
+      cl_mem currSizeBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | 
+            CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), &currSize, &err);
+      error_handler(err, "Failed to create 'startPos' buffer");
+      cl_mem output_line = clCreateBuffer(context, CL_MEM_READ_WRITE, 
+                           finalSize*sizeof(cl_char), NULL, &err);
+      error_handler(err, "Failed to create 'output_line' buffer");
+
+      errors.push_back(clSetKernelArg(flipCoords, 0, sizeof(cl_mem), &inputString));   //input_string
+      errors.push_back(clSetKernelArg(flipCoords, 1, sizeof(cl_mem), &startPos));      //start_positions
+      errors.push_back(clSetKernelArg(flipCoords, 2, sizeof(cl_mem), &currSizeBuffer));     //num_pairs
+      errors.push_back(clSetKernelArg(flipCoords, 3, sizeof(cl_mem), &pos_ptr2));      //pos_ptr
+      errors.push_back(clSetKernelArg(flipCoords, 4, sizeof(cl_uint), &finalSize));    //finalSize
+      errors.push_back(clSetKernelArg(flipCoords, 5, sizeof(cl_uint), NULL));          //curr_pos
+      errors.push_back(clSetKernelArg(flipCoords, 6, sizeof(cl_uint), NULL));          //loc_length
+      errors.push_back(clSetKernelArg(flipCoords, 7, sizeof(cl_uint), NULL));          //mid
+      errors.push_back(clSetKernelArg(flipCoords, 8, sizeof(cl_uint), NULL));          //y_len
+      errors.push_back(clSetKernelArg(flipCoords, 9, sizeof(cl_mem), &output_line));   //output_string
+      error_handler(errors, "Couldn't set args for flipCoords");
+
+      err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+      error_handler(err, "Couldn't enqueue flipCoords");
+      clFinish(queue);
+
+      cl_char* output_str = (cl_char*)malloc(finalSize*sizeof(cl_char));
+      err = clEnqueueReadBuffer(queue, output_line, CL_TRUE, 0, 
+                  finalSize*sizeof(cl_char), output_str, 0, NULL, NULL);
+
+      cl_uint tag_length = commPos[currStart]-currStart+1;
+      cout<<chunk.substr(currStart, tag_length);
+      for(cl_uint i=0; i<finalSize; ++i) {
+         cout<<output_str[i];
+      }
+      cout<<endl<<endl;
+
+      free(output_str);
+      clReleaseMemObject(pos_ptr2);
+      clReleaseMemObject(startPos);
+      clReleaseMemObject(currSizeBuffer);
+      clReleaseMemObject(output_line);
    }
 
    free(commPos);
