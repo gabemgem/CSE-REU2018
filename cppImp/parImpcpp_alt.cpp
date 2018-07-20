@@ -6,7 +6,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cstdlib>
 #include <vector>
 
 #define DEVICE_TYPE CL_DEVICE_TYPE_GPU

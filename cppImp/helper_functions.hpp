@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstdlib>
 #include <CL/cl.hpp>
 
 #define CHUNK_SIZE 2048
