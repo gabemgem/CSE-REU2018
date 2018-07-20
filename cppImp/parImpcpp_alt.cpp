@@ -30,16 +30,7 @@ int main(int argc, char** argv){
    //Get input file
    std::string chunk, residual;
    std::ifstream inputFile(ifile);
-<<<<<<< HEAD
-   if(!inputFile.is_open()) {
-      exit(1);
-   }
-   std::string garbage;
-   std::getline(inputFile, garbage);
-   read_chunk_pp(inputFile, chunk, residual);
-=======
    read_chunk(inputFile, chunk, residual);
->>>>>>> 4df3abb509cbbf086f353ee45dd4f4def6899c33
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
