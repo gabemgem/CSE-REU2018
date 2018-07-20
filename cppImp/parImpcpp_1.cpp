@@ -121,7 +121,7 @@ int main(int argc, char** argv){
    //Get input file
    std::string chunk, residual;
    std::ifstream inputFile(INPUT_FILE);
-   read_chunk_pp(inputFile, chunk, residual);
+   read_chunk(inputFile, chunk, residual);
 
    cl_char* c_chunk = (cl_char*)malloc(chunk.size()*sizeof(cl_char));
    for(unsigned int i=0; i<chunk.size(); ++i){

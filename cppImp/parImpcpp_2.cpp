@@ -136,7 +136,7 @@ int main() {
    std::string chunk, residual;
 
    std::ifstream inputFile("input.txt");
-   read_chunk_pp(inputFile, chunk, residual);
+   read_chunk(inputFile, chunk, residual);
 
    global_size = chunk.size();
    cl_char * c_chunk = (cl_char *)malloc(chunk.size());
