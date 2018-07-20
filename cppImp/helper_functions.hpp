@@ -17,24 +17,18 @@
    starts/ends on with a complete line.
 */
 void read_chunk(std::ifstream & file, std::string & chunk, std::string & residual){
-   if(!file.is_open()) {
-      exit(1);
-   }
    unsigned int size = chunk.size();
    std::string line;
    while(std::getline(file, line)){
       if(size + line.size() > CHUNK_SIZE){
-         //removing ending newline
-         //chunk = chunk.substr(0, size-1);
-         residual = line;
-         file.close();
+         residual = line + '\n';
          return;
       }
 
-      chunk += line + "\n";
+      chunk += line + '\n';
+      line.clear();
       size = chunk.size();
    }
-   file.close();
 }
 
 /* Reads in a chunk of data from file. Ensures that  the chunk

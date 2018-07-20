@@ -21,22 +21,34 @@ using namespace std;
 
 int main(int argc, char** argv){
 
-   std::string ifile = INPUT_FILE;
+   string ifile = INPUT_FILE;
    if(argc==2) {
       ifile = argv[1];
    }
 
    //Get input file
+<<<<<<< HEAD
    std::string chunk, residual;
    std::ifstream inputFile(ifile);
+=======
+   string chunk, residual;
+   ifstream inputFile(ifile);
+>>>>>>> 1419d96d8b420bb442d2ae78a04c4768245d8de7
 
    if(!inputFile.is_open()) {
-      exit(1);
+-      exit(1);
    }
+<<<<<<< HEAD
    std::string garbage;
    std::getline(inputFile, garbage);
    read_chunk(inputFile, chunk, residual);
 
+=======
+
+   string garbage;
+   getline(inputFile, garbage);
+   read_chunk(inputFile, chunk, residual);
+>>>>>>> 1419d96d8b420bb442d2ae78a04c4768245d8de7
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
