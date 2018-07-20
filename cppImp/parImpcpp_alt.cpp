@@ -1,14 +1,13 @@
 
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define DEVICE_TYPE CL_DEVICE_TYPE_GPU
 
 #include <CL/cl.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
-
-#define DEVICE_TYPE CL_DEVICE_TYPE_GPU
 
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
@@ -30,16 +29,14 @@ int main(int argc, char** argv){
    //Get input file
    std::string chunk, residual;
    std::ifstream inputFile(ifile);
-<<<<<<< HEAD
+
    if(!inputFile.is_open()) {
       exit(1);
    }
    std::string garbage;
    std::getline(inputFile, garbage);
-   read_chunk_pp(inputFile, chunk, residual);
-=======
    read_chunk(inputFile, chunk, residual);
->>>>>>> 4df3abb509cbbf086f353ee45dd4f4def6899c33
+
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
@@ -265,7 +262,7 @@ int main(int argc, char** argv){
       cl_char* output_str = (cl_char*)malloc(finalSize*sizeof(cl_char));
       err = clEnqueueReadBuffer(queue, output_line, CL_TRUE, 0, 
                   finalSize*sizeof(cl_char), output_str, 0, NULL, NULL);
-
+      clFinish(queue);
       cl_uint tag_length = commPos[currStart]-currStart+1;
       cout<<chunk.substr(currStart, tag_length);
       for(cl_uint i=0; i<finalSize; ++i) {
