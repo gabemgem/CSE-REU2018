@@ -22,14 +22,21 @@ using namespace std;
 
 int main(int argc, char** argv){
 
-   std::string ifile = INPUT_FILE;
+   string ifile = INPUT_FILE;
    if(argc==2) {
       ifile = argv[1];
    }
 
    //Get input file
-   std::string chunk, residual;
-   std::ifstream inputFile(ifile);
+   string chunk, residual;
+   ifstream inputFile(ifile);
+
+   if(!inputFile.is_open()) {
+-      exit(1);
+   }
+
+   string garbage;
+   getline(inputFile, garbage);
    read_chunk(inputFile, chunk, residual);
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
