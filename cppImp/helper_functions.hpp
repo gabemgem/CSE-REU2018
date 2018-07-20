@@ -8,6 +8,9 @@
 
 #define CHUNK_SIZE 2048
 
+#ifndef DEVICE_TYPE
+#define DEVICE_TYPE CL_DEVICE_TYPE_GPU
+#endif
 
 /* Reads in a chunk of data from file. Ensures that  the chunk
    starts/ends on with a complete line.
@@ -78,6 +81,81 @@ cl_uint lg(cl_uint val){
    if((1 << out) < val) ++out;
 
    return out;
+}
+
+cl_device_id create_device() {
+   cl_int err;
+
+   cl_uint num_plats;
+   clGetPlatformIDs(0, NULL, &num_plats);
+   if(num_plats == 0){
+      printf("No platforms found\n");
+      exit(-1);
+   }
+   cl_platform_id *platforms = (cl_platform_id *)malloc(sizeof(cl_platform_id)*num_plats);
+   err = clGetPlatformIDs(num_plats, platforms, NULL);
+   error_handler(err, "Couldn't get platform");
+
+   cl_device_id device;
+   for(cl_uint i=0; i<num_plats; ++i){
+      err = clGetDeviceIDs(platforms[i], DEVICE_TYPE, 1, &device, NULL);
+      if(err < 0) continue;
+      cl_bool canUse;
+      clGetDeviceInfo(device, CL_DEVICE_AVAILABLE, sizeof(cl_bool), &canUse, NULL);
+      if(canUse){
+         break;
+      }
+   }
+   error_handler(err, "Couldn't access any devices of specified type");
+
+   return device;
+}
+
+cl_program build_program(cl_context context, cl_device_id dev, std::string filename){
+   
+   cl_program program;
+   FILE *program_handle;
+   char *program_buffer, *program_log;
+   size_t program_size, log_size;
+   int err;
+
+   /* Read program file and place content into buffer */
+   program_handle = fopen(filename.c_str(), "r");
+   if(program_handle == NULL) {
+      perror("Couldn't find the program file");
+      exit(1);
+   }
+   fseek(program_handle, 0, SEEK_END);
+   program_size = ftell(program_handle);
+   rewind(program_handle);
+   program_buffer = (char*)malloc(program_size + 1);
+   program_buffer[program_size] = '\0';
+   fread(program_buffer, sizeof(char), program_size, program_handle);
+   fclose(program_handle);
+
+   /* Create program from file */
+   program = clCreateProgramWithSource(context, 1, 
+      (const char**)&program_buffer, &program_size, &err);
+   error_handler(err, "Couldn't create the program");
+   free(program_buffer);
+
+   /* Build program */
+   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+   if(err < 0) {
+
+      /* Find size of log and print to std output */
+      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
+            0, NULL, &log_size);
+      program_log = (char*) malloc(log_size + 1);
+      program_log[log_size] = '\0';
+      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
+            log_size + 1, program_log, NULL);
+      printf("%s\n", program_log);
+      free(program_log);
+      exit(1);
+   }
+
+   return program;
 }
 
 #endif /* helper_functions.h */
