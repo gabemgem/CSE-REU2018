@@ -266,16 +266,21 @@ __kernel void flipCoords(
    __global uint* start_positions,  //Array of comma locations between pairs
    __global uint* num_pairs,        //Number of pairs in polyline
    __global uint* pos_ptr,          //WG's atomically increment to choose pair
+   uint finalSize,
    __local uint* curr_pos,          //Which pair WG is currently looking at
    __local uint* loc_length,        //Length of local pair
-   __local char* str,               //String to copy local data into
    __local uint* mid,               //Holds location of the comma in a pair
    __local uint* y_len,             //Holds length of y coord for the pair
    __global char* output_string     //Polyline output
       ) {
 
    uint gid = get_global_id(0), lid = get_local_id(0);
-   uint wg_size = get_local_size(0);
+   uint glob_size = get_global_size(0), wg_size = get_local_size(0);
+   for(uint i = 0; i < finalSize; i < glob_size) {
+      if(gid+i<finalSize) {
+         output_string[gid+i] = input_string[gid+i-1];
+      }
+   }
    while(*pos_ptr<*num_pairs) {
       if(lid==0) {
          *curr_pos = atomic_inc(pos_ptr);
