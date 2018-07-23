@@ -41,8 +41,11 @@ __kernel void newLine(__global char * input, __global uint * output, uint size,
 /* Marks the position of newline charaters */
 __kernel void newLineAlt(__global char * input, __global uint * output, uint size){
    uint gid = get_global_id(0);
-   if(gid < size){
-      output[gid] = (input[gid] == NEWLINE);
+   uint gsize = get_global_size(0);
+   for(uint i = 0; i < size; i+=gsize) {
+      if(gid+i < size){
+         output[gid+i] = (input[gid+i] == NEWLINE);
+      }
    }
 }
 
@@ -51,16 +54,19 @@ __kernel void newLineAlt(__global char * input, __global uint * output, uint siz
    assumed that first elem is 0 and the last is "chunk size" - 1 */
 __kernel void getLinePos(__global uint * data, __global uint * output, uint size){
    uint gid = get_global_id(0);
-   if(gid < size){
-      if(gid == 0){
-         if(data[0]){
-            output[1] = 0;
-            output[2] = 1;
+   uint gsize = get_global_size(0);
+   for(uint i = 0; i < size; i+=gsize) {
+      if(gid+i < size){
+         if(gid+i == 0){
+            if(data[0]){
+               output[1] = 0;
+               output[2] = 1;
+            }
          }
-      }
-      else if(data[gid] != data[gid-1]){
-         output[(2*data[gid-1]) + 1] = gid;
-         output[2*data[gid]] = gid + 1;
+         else if(data[gid+i] != data[gid+i-1]){
+            output[(2*data[gid+i-1]) + 1] = gid+i;
+            output[2*data[gid+i]] = gid+i + 1;
+         }
       }
    }
 }
