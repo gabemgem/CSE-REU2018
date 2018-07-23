@@ -27,28 +27,16 @@ int main(int argc, char** argv){
    }
 
    //Get input file
-<<<<<<< HEAD
-   std::string chunk, residual;
-   std::ifstream inputFile(ifile);
-=======
    string chunk, residual;
    ifstream inputFile(ifile);
->>>>>>> 1419d96d8b420bb442d2ae78a04c4768245d8de7
 
    if(!inputFile.is_open()) {
 -      exit(1);
    }
-<<<<<<< HEAD
-   std::string garbage;
-   std::getline(inputFile, garbage);
-   read_chunk(inputFile, chunk, residual);
-
-=======
 
    string garbage;
    getline(inputFile, garbage);
    read_chunk(inputFile, chunk, residual);
->>>>>>> 1419d96d8b420bb442d2ae78a04c4768245d8de7
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
@@ -129,6 +117,7 @@ int main(int argc, char** argv){
       error_handler(err, "Failed to enqueue 'addScanStep' kernel");
    }
 
+
    //Running addPostScanStep
    for(cl_uint stride = global_size/4; stride > 0; stride /= 2){
       errors.push_back(clSetKernelArg(addPostScanStep, 0, sizeof(cl_mem), &newLineBuff));
@@ -140,8 +129,8 @@ int main(int argc, char** argv){
                &global_size, &local_size, 0, NULL, NULL);
       error_handler(err, "Failed to enqueue 'addPostScanStep' kernel");
    }
-
    clFinish(queue);
+
 
    //Setting up buffers for line positions and final result sizes
    cl_uint * newLineArr = (cl_uint *)malloc(sizeof(cl_uint)*chunkSize);
@@ -224,6 +213,7 @@ int main(int argc, char** argv){
             sizeof(cl_uint)*posSize, pos, 0, NULL, NULL);
    error_handler(err, "Failed to read 'posBuff' buffer");
 
+
    // Printing out results
    for(size_t i=0; i<posSize; i+=2){
       int currStart = pos[i];
@@ -235,9 +225,10 @@ int main(int argc, char** argv){
       cout << endl;
    }
 
+
    for(size_t i=0; i<posSize; i+=2) {
       cl_int currStart = pos[i];
-      cl_uint currSize = sizes[i/2]-7;//7 irrelevant commas
+      cl_uint currSize = sizes[i/2]-7; //7 irrelevant commas
       cl_uint finalSize = (pos[i+1]-commPos[currStart+7]-1);
       cl_uint* currCommas = &commPos[currStart+7];
       currCommas[0]+=2;
