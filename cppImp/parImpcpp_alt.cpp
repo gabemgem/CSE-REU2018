@@ -229,7 +229,7 @@ int main(int argc, char** argv){
    }
 
    
-   cl_mem inputString2 = clCreateBuffer(context, CL_MEM_READ_ONLY |
+   cl_mem inputString2 = clCreateBuffer(context, CL_MEM_READ_WRITE |
             CL_MEM_COPY_HOST_PTR, chunkSize, c_chunk, &err);
    error_handler(err, "Failed to create 'inputString' buffer2");
 
@@ -246,9 +246,7 @@ int main(int argc, char** argv){
       cl_mem startPos = clCreateBuffer(context, CL_MEM_READ_WRITE | 
             CL_MEM_COPY_HOST_PTR, currSize*sizeof(cl_uint), &currCommas, &err);
       error_handler(err, "Failed to create 'startPos' buffer");
-      cl_mem currSizeBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | 
-            CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), &currSize, &err);
-      error_handler(err, "Failed to create 'startPos' buffer");
+      
       cl_mem output_line = clCreateBuffer(context, CL_MEM_READ_WRITE, 
                            finalSize*sizeof(cl_char), NULL, &err);
       error_handler(err, "Failed to create 'output_line' buffer");
@@ -267,7 +265,6 @@ int main(int argc, char** argv){
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
       error_handler(err, "Couldn't enqueue flipCoords");
-      clFinish(queue);
 
       cl_char* output_str = (cl_char*)malloc(finalSize*sizeof(cl_char));
       err = clEnqueueReadBuffer(queue, output_line, CL_TRUE, 0, 
@@ -283,7 +280,6 @@ int main(int argc, char** argv){
       free(output_str);
       clReleaseMemObject(pos_ptr2);
       clReleaseMemObject(startPos);
-      clReleaseMemObject(currSizeBuffer);
       clReleaseMemObject(output_line);
    }
 
