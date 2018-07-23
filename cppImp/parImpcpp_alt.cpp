@@ -27,28 +27,18 @@ int main(int argc, char** argv){
    }
 
    //Get input file
-<<<<<<< HEAD
+
    std::string chunk, residual;
    std::ifstream inputFile(ifile);
-=======
-   string chunk, residual;
-   ifstream inputFile(ifile);
->>>>>>> 1419d96d8b420bb442d2ae78a04c4768245d8de7
+
 
    if(!inputFile.is_open()) {
--      exit(1);
+      exit(1);
    }
-<<<<<<< HEAD
+
    std::string garbage;
    std::getline(inputFile, garbage);
    read_chunk(inputFile, chunk, residual);
-
-=======
-
-   string garbage;
-   getline(inputFile, garbage);
-   read_chunk(inputFile, chunk, residual);
->>>>>>> 1419d96d8b420bb442d2ae78a04c4768245d8de7
 
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
@@ -227,13 +217,18 @@ int main(int argc, char** argv){
    // Printing out results
    for(size_t i=0; i<posSize; i+=2){
       int currStart = pos[i];
-      int currSize = sizes[i/2];
+      cl_uint currSize = sizes[i/2];
       cout<<currStart<<": ";
       for(size_t j=0; j<currSize; ++j){
          cout << commPos[currStart + j] << " ";
       }
       cout << endl;
    }
+
+   
+   cl_mem inputString2 = clCreateBuffer(context, CL_MEM_READ_ONLY |
+            CL_MEM_COPY_HOST_PTR, chunkSize, c_chunk, &err);
+   error_handler(err, "Failed to create 'inputString' buffer2");
 
    for(size_t i=0; i<posSize; i+=2) {
       cl_int currStart = pos[i];
@@ -255,9 +250,9 @@ int main(int argc, char** argv){
                            finalSize*sizeof(cl_char), NULL, &err);
       error_handler(err, "Failed to create 'output_line' buffer");
 
-      errors.push_back(clSetKernelArg(flipCoords, 0, sizeof(cl_mem), &inputString));   //input_string
+      errors.push_back(clSetKernelArg(flipCoords, 0, sizeof(cl_mem), &inputString2));   //input_string
       errors.push_back(clSetKernelArg(flipCoords, 1, sizeof(cl_mem), &startPos));      //start_positions
-      errors.push_back(clSetKernelArg(flipCoords, 2, sizeof(cl_mem), &currSizeBuffer));     //num_pairs
+      errors.push_back(clSetKernelArg(flipCoords, 2, sizeof(cl_uint), &currSize));     //num_pairs
       errors.push_back(clSetKernelArg(flipCoords, 3, sizeof(cl_mem), &pos_ptr2));      //pos_ptr
       errors.push_back(clSetKernelArg(flipCoords, 4, sizeof(cl_uint), &finalSize));    //finalSize
       errors.push_back(clSetKernelArg(flipCoords, 5, sizeof(cl_uint), NULL));          //curr_pos
@@ -295,6 +290,7 @@ int main(int argc, char** argv){
 
    //Freeing CL Objects
    clReleaseMemObject(inputString);
+   clReleaseMemObject(inputString2);
    clReleaseMemObject(newLineBuff);
    clReleaseMemObject(posBuff);
    clReleaseMemObject(finalRes);
