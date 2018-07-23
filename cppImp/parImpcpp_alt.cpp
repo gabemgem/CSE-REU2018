@@ -266,7 +266,6 @@ int main(int argc, char** argv){
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
       error_handler(err, "Couldn't enqueue flipCoords");
-      clFinish(queue);
 
       cl_char* output_str = (cl_char*)malloc(finalSize*sizeof(cl_char));
       err = clEnqueueReadBuffer(queue, output_line, CL_TRUE, 0, 
