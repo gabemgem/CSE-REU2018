@@ -67,7 +67,7 @@ cl_int pad_num(cl_int old) {
    return new_val;
 }
 
-cl_uint lg(cl_uint val){
+cl_uint lg(cl_int val){
    cl_uint out = 0, cpy = val;
    while(cpy > 1){
       cpy >>= 1;

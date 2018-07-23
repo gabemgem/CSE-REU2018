@@ -268,9 +268,9 @@ __kernel void findSep(
 
 
 __kernel void flipCoords(
-   __global char* input_string,     //Just the polyline from original string
+   __global char* input_string,     //The original string
    __global uint* start_positions,  //Array of comma locations between pairs
-   __global uint* num_pairs,        //Number of pairs in polyline
+   uint num_pairs,        //Number of pairs in polyline
    __global uint* pos_ptr,          //WG's atomically increment to choose pair
    uint finalSize,
    __local uint* curr_pos,          //Which pair WG is currently looking at
@@ -284,10 +284,10 @@ __kernel void flipCoords(
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
    for(uint i = 0; i < finalSize; i < glob_size) {
       if(gid+i<finalSize) {
-         output_string[gid+i] = input_string[gid+i-1];
+         output_string[gid+i] = input_string[start_positions[0]+gid+i-1];
       }
    }
-   while(*pos_ptr<*num_pairs) {
+   while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          *curr_pos = atomic_inc(pos_ptr);
          *loc_length = start_positions[*curr_pos+1]-start_positions[*curr_pos]-3;
@@ -297,14 +297,14 @@ __kernel void flipCoords(
          if(i+lid<*loc_length && input_string[i+lid+start_positions[*curr_pos]] == SEP) {
             *mid = lid+i;
             *y_len = *loc_length - (*mid + 1);
-            output_string[start_positions[*curr_pos]+*y_len] = ',';
+            output_string[start_positions[*curr_pos]+*y_len+2] = ',';
             break;
          }
       }
       barrier(CLK_LOCAL_MEM_FENCE);
       for(uint i = 2; i<*loc_length; i+=wg_size) {
          if(lid+i!=*mid && lid+i<*loc_length) {
-            uint target = (lid+i>*mid) ? lid + i - *mid - 1 : *y_len + lid + i + 1;
+            uint target = (lid+i>*mid) ? lid + i - *mid - 1 : *y_len + lid + i - 1;
             output_string[target] = input_string[start_positions[*curr_pos]+i+lid];
          }
       }
