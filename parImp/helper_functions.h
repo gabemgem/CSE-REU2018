@@ -9,6 +9,8 @@
 #include <CL/cl.h>
 #endif
 
+#define CHUNK_SIZE 1024
+
 cl_int pad_num(cl_int old) {
    cl_int new = 1;
    while(old>new) {
