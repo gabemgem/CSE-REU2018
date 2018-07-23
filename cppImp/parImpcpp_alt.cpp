@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #include "error_handler.hpp"
 #include "helper_functions.hpp"
