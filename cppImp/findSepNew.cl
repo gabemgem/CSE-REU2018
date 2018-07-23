@@ -282,11 +282,12 @@ __kernel void flipCoords(
 
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
-   for(uint i = 0; i < finalSize; i < glob_size) {
+   for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
          output_string[gid+i] = input_string[start_positions[0]+gid+i-1];
       }
    }
+   /*
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          *curr_pos = atomic_inc(pos_ptr);
@@ -310,5 +311,6 @@ __kernel void flipCoords(
       }
       barrier(CLK_LOCAL_MEM_FENCE);
    }
+   */
    
 }
