@@ -277,32 +277,44 @@ __kernel void flipCoords(
    __local uint* loc_length,        //Length of local pair
    __local uint* mid,               //Holds location of the comma in a pair
    __local uint* y_len,             //Holds length of y coord for the pair
-   __global char* output_string     //Polyline output
+   __global char* output_string,     //Polyline output
+   uint start_location
       ) {
 
+   
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
+   
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
-         output_string[gid+i] = input_string[start_positions[0]+gid+i-1];
+         char result = input_string[start_location+gid+i];
+
+         output_string[gid+i] = result;
       }
    }
-   /*
+
+   
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          *curr_pos = atomic_inc(pos_ptr);
-         *loc_length = start_positions[*curr_pos+1]-start_positions[*curr_pos]-3;
+         *loc_length = start_positions[(*curr_pos)+1]-start_positions[*curr_pos]-3;
       }
       barrier(CLK_LOCAL_MEM_FENCE);
+      
+
       for(uint i = 2; i<*loc_length; i+=wg_size) {
-         if(i+lid<*loc_length && input_string[i+lid+start_positions[*curr_pos]] == SEP) {
-            *mid = lid+i;
-            *y_len = *loc_length - (*mid + 1);
-            output_string[start_positions[*curr_pos]+*y_len+2] = ',';
-            break;
+         if(i+lid<*loc_length) {
+            
+            if(input_string[i+lid+start_positions[*curr_pos]] == SEP) {
+               *mid = lid+i;
+               *y_len = *loc_length - (*mid + 1);
+               output_string[start_positions[*curr_pos]+*y_len+2] = ',';
+               break;
+            }
          }
       }
       barrier(CLK_LOCAL_MEM_FENCE);
+      /*
       for(uint i = 2; i<*loc_length; i+=wg_size) {
          if(lid+i!=*mid && lid+i<*loc_length) {
             uint target = (lid+i>*mid) ? lid + i - *mid - 1 : *y_len + lid + i - 1;
@@ -310,7 +322,8 @@ __kernel void flipCoords(
          }
       }
       barrier(CLK_LOCAL_MEM_FENCE);
+      */
    }
-   */
+   
    
 }
