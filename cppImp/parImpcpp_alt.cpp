@@ -186,13 +186,6 @@ int main(int argc, char** argv){
    errors.push_back(clSetKernelArg(findSep, 7, sizeof(cl_char)*local_size, NULL));  //escape
    errors.push_back(clSetKernelArg(findSep, 8, sizeof(cl_char)*local_size, NULL));  //function
    errors.push_back(clSetKernelArg(findSep, 9, sizeof(cl_uint), &numLines));        //lines
-   errors.push_back(clSetKernelArg(findSep, 10, sizeof(cl_uint), NULL));            //len
-   errors.push_back(clSetKernelArg(findSep, 11, sizeof(cl_uint), NULL));            //curr_pos
-   errors.push_back(clSetKernelArg(findSep, 12, sizeof(cl_uint), NULL));            //prev_escape
-   errors.push_back(clSetKernelArg(findSep, 13, sizeof(cl_char), NULL));            //prev_function
-   errors.push_back(clSetKernelArg(findSep, 14, sizeof(cl_uint), NULL));            //prev_sep
-   errors.push_back(clSetKernelArg(findSep, 15, sizeof(cl_uint), NULL));            //elems_scanned
-   errors.push_back(clSetKernelArg(findSep, 16, sizeof(cl_char), NULL));            //first_char
    error_handler(errors, "Failed to set a kernel arguement for 'findSep'");
 
    err = clEnqueueNDRangeKernel(queue, findSep, 1, NULL, 
@@ -234,7 +227,7 @@ int main(int argc, char** argv){
       cl_int currStart = pos[i];
       if(sizes[i/2]==0) {continue;}
       cl_uint currSize = sizes[i/2]-7; //7 irrelevant commas
-      cl_uint finalSize = (pos[i+1]-commPos[currStart+7]-1);
+      cl_uint finalSize = (pos[i+1]-commPos[currStart+7]);
       cl_uint* currCommas = &commPos[currStart+7];
       currCommas[0]+=2;
       cl_uint posTracker2 = 0;
@@ -258,8 +251,9 @@ int main(int argc, char** argv){
       errors.push_back(clSetKernelArg(flipCoords, 6, sizeof(cl_uint), NULL));          //loc_length
       errors.push_back(clSetKernelArg(flipCoords, 7, sizeof(cl_uint), NULL));          //mid
       errors.push_back(clSetKernelArg(flipCoords, 8, sizeof(cl_uint), NULL));          //y_len
-      errors.push_back(clSetKernelArg(flipCoords, 9, sizeof(cl_mem), &output_line));   //output_string
-      errors.push_back(clSetKernelArg(flipCoords, 10, sizeof(cl_uint), &currCommas[0]));//start_location
+      errors.push_back(clSetKernelArg(flipCoords, 9, sizeof(cl_uint), NULL));          
+      errors.push_back(clSetKernelArg(flipCoords, 10, sizeof(cl_mem), &output_line));   //output_string
+      errors.push_back(clSetKernelArg(flipCoords, 11, sizeof(cl_uint), &currCommas[0]));//start_location
       error_handler(errors, "Couldn't set args for flipCoords");
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
