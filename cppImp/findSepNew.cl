@@ -280,7 +280,8 @@ __kernel void flipCoords(
    __global char* output_string,     //Polyline output
    uint start_location,
    __local bool* found,
-   __local uint* loc_start2
+   __local uint* loc_start2,
+   uint currStart
       ) {
 
    
@@ -304,12 +305,12 @@ __kernel void flipCoords(
             return;
          }
 
-         *loc_length = start_positions[(*curr_pos)+1]-start_positions[*curr_pos]-3;
+         *loc_length = start_positions[(*curr_pos)+1+currStart]-start_positions[*curr_pos+currStart]-3;
          *found=false;
          *mid=0;
-         loc_start = start_positions[0];
+         loc_start = start_positions[*curr_pos+currStart];
          for(uint i=0; i<11; i++) {
-            printf("%u ", start_positions[i]);
+            printf("%u ", start_positions[i+currStart]);
          }
 
       }
@@ -343,7 +344,7 @@ __kernel void flipCoords(
       for(uint i = 2; i<*loc_length; i+=wg_size) {
          if(lid+i!=*mid && lid+i<*loc_length) {
             uint target = (lid+i>*mid) ? lid + i - *mid - 1 : *y_len + lid + i - 1;
-            output_string[target] = input_string[start_positions[*curr_pos]+i+lid];
+            output_string[target] = input_string[start_positions[*curr_pos+currStart]+i+lid];
          }
       }
       barrier(CLK_LOCAL_MEM_FENCE);
