@@ -230,28 +230,23 @@ int main(int argc, char** argv){
    
 
    for(size_t i=0; i<posSize; i+=2) {
-      cl_int currStart = pos[i];
+      cl_uint currStart = pos[i]+7;
       if(sizes[i/2]==0) {continue;}
       cl_uint currSize = sizes[i/2]-7; //7 irrelevant commas
-      cl_uint finalSize = (pos[i+1]-commPos[currStart+7]-1);
-      cl_uint* currCommas = (commPos+currStart+7);
-      currCommas[0]+=1;
+      cl_uint finalSize = (pos[i+1]-commPos[currStart]-1);
+
 
       cl_uint posTracker2 = 0;
       cl_mem pos_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | 
             CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), &posTracker2, &err);
       error_handler(err, "Failed to create 'pos_ptr' buffer");
-
-      cl_mem startPos = clCreateBuffer(context, CL_MEM_READ_WRITE | 
-            CL_MEM_COPY_HOST_PTR, currSize*sizeof(cl_uint), &currCommas, &err);
-      error_handler(err, "Failed to create 'startPos' buffer");
       
       cl_mem output_line = clCreateBuffer(context, CL_MEM_READ_WRITE, 
                            finalSize*sizeof(cl_char), NULL, &err);
       error_handler(err, "Failed to create 'output_line' buffer");
 
       errors.push_back(clSetKernelArg(flipCoords, 0, sizeof(cl_mem), &inputString));   //input_string
-      errors.push_back(clSetKernelArg(flipCoords, 1, sizeof(cl_mem), &startPos));      //start_positions
+      errors.push_back(clSetKernelArg(flipCoords, 1, sizeof(cl_mem), &finalRes));      //start_positions
       errors.push_back(clSetKernelArg(flipCoords, 2, sizeof(cl_uint), &currSize));     //num_pairs
       errors.push_back(clSetKernelArg(flipCoords, 3, sizeof(cl_mem), &pos_ptr2));      //pos_ptr
       errors.push_back(clSetKernelArg(flipCoords, 4, sizeof(cl_uint), &finalSize));    //finalSize
@@ -260,9 +255,10 @@ int main(int argc, char** argv){
       errors.push_back(clSetKernelArg(flipCoords, 7, sizeof(cl_uint), NULL));          //mid
       errors.push_back(clSetKernelArg(flipCoords, 8, sizeof(cl_uint), NULL));          //y_len
       errors.push_back(clSetKernelArg(flipCoords, 9, sizeof(cl_mem), &output_line));   //output_string
-      errors.push_back(clSetKernelArg(flipCoords, 10, sizeof(cl_uint), &currCommas[0]));//start_location
+      errors.push_back(clSetKernelArg(flipCoords, 10, sizeof(cl_uint), &commPos[currStart]));//start_location
       errors.push_back(clSetKernelArg(flipCoords, 11, sizeof(cl_bool), NULL));
       errors.push_back(clSetKernelArg(flipCoords, 12, sizeof(cl_uint), NULL));
+      errors.push_back(clSetKernelArg(flipCoords, 13, sizeof(cl_uint), &currStart));
       error_handler(errors, "Couldn't set args for flipCoords");
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
@@ -283,7 +279,6 @@ int main(int argc, char** argv){
       
       free(output_str);
       clReleaseMemObject(pos_ptr2);
-      clReleaseMemObject(startPos);
       clReleaseMemObject(output_line);
    }
 
