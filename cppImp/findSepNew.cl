@@ -271,17 +271,11 @@ __kernel void findSep(
 __kernel void flipCoords(
    __global char* input_string,     //The original string
    __global uint* start_positions,  //Array of comma locations between pairs
-   uint num_pairs,        //Number of pairs in polyline
    __global uint* pos_ptr,          //WG's atomically increment to choose pair
-   uint finalSize,
-   __local uint* curr_pos,          //Which pair WG is currently looking at
-   __local uint* loc_length,        //Length of local pair
-   __local uint* mid,               //Holds location of the comma in a pair
-   __local uint* y_len,             //Holds length of y coord for the pair
    __global char* output_string,     //Polyline output
+   uint num_pairs,        //Number of pairs in polyline
+   uint finalSize,
    uint start_location,
-   __local bool* found,
-   __local uint* loc_start2,
    uint currStart
       ) {
 
@@ -297,7 +291,7 @@ __kernel void flipCoords(
       }
    }
 
-   __local uint loc_start;
+   __local uint loc_start, curr_pos, loc_length, mid, y_len;
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          
