@@ -276,14 +276,17 @@ __kernel void flipCoords(
    uint num_pairs,        //Number of pairs in polyline
    uint finalSize,
    uint start_location,
-   uint currStart
+   uint currStart,
+   uint last_comma
       ) {
 
    
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
 
-   
+   if(gid==0) {
+      start_positions[currStart]+=1;
+   }
    
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
@@ -293,7 +296,7 @@ __kernel void flipCoords(
       }
    }
 
-   __local uint loc_start, curr_pos, loc_length, mid, y_len;
+   __local uint loc_start, curr_pos, loc_length, mid, y_len, offset;
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          
@@ -301,50 +304,50 @@ __kernel void flipCoords(
          if(curr_pos>=num_pairs) {
             return;
          }
-
-         loc_length = start_positions[(curr_pos)+1+currStart]-start_positions[curr_pos+currStart]-3;
+         uint next_comma = (start_positions[currStart+curr_pos+1]!=0) ?
+               start_positions[currStart+curr_pos+1] : last_comma;
+         loc_length = next_comma-start_positions[curr_pos+currStart]-4;
          mid=0;
          loc_start = start_positions[curr_pos+currStart];
-         for(uint i=0; i<11; i++) {
-            printf("%u ", start_positions[i+currStart]);
-         }
-
+         offset = start_positions[curr_pos+currStart]-start_location;
+         printf("%u ", loc_start);
       }
       barrier(CLK_LOCAL_MEM_FENCE);
       
       
-      uint len = loc_length;
-      uint loc_mid = mid;
-      uint loc_y_len = y_len;
 
-
-      
-      
-      char c = (lid+3<len) ? input_string[loc_start+lid+3] : ' ';
-      for(uint i = 3; i<len; i+=wg_size) {
-         //if(mid!=0){break;}
+      //*
+      char c = (lid+3<loc_length) ? input_string[loc_start+lid+3] : ' ';
+      //printf("%c ", c);
+      if(c == SEP) {
          
-
-         if(c == SEP) {
-            
-            mid = lid+i;
-            y_len = len - (mid + 1);
-            //output_string[loc_start+y_len+2] = ',';
-            
-            
-         }
-          
+         mid = lid+3;
+         y_len = loc_length - mid + 1;
+         output_string[offset+y_len+3] = ',';
+         output_string[offset+y_len+4] = ' ';
+         
       }
+      
+      
       barrier(CLK_LOCAL_MEM_FENCE); 
-      /*
-      for(uint i = 2; i<loc_length; i+=wg_size) {
-         if(lid+i!=mid && lid+i<loc_length) {
-            uint target = (lid+i>mid) ? lid + i - mid - 1 : y_len + lid + i - 1;
-            output_string[target] = input_string[start_positions[curr_pos+currStart]+i+lid];
-         }
+      if(lid+3<loc_length && lid+3>mid) {
+         uint target = lid-mid+4;
+         output_string[offset+target] = c;
       }
+      else if(lid+3<loc_length && lid+3<mid) {
+         uint target = y_len+lid+5;
+         output_string[offset+target] = c;
+      }
+      /*
+      
+      if((lid+3<loc_length) && (!(lid+3==mid || lid+3==mid+1))) {
+         
+         uint target = (lid+3>mid) ? lid+3 - mid + 1 : y_len + lid+3 + 2;
+         output_string[target+offset] = input_string[start_positions[curr_pos+currStart]+3+lid];
+      }
+      
       barrier(CLK_LOCAL_MEM_FENCE);
-      */
+      //*/
    }
    
    
