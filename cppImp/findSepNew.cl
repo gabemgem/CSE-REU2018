@@ -282,6 +282,8 @@ __kernel void flipCoords(
    
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
+
+   
    
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
@@ -301,7 +303,6 @@ __kernel void flipCoords(
          }
 
          loc_length = start_positions[(curr_pos)+1+currStart]-start_positions[curr_pos+currStart]-3;
-         *found=false;
          mid=0;
          loc_start = start_positions[curr_pos+currStart];
          for(uint i=0; i<11; i++) {
