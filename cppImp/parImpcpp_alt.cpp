@@ -13,7 +13,7 @@
 #include "helper_functions.hpp"
 
 #define KERNEL_FILE "findSepNew.cl"
-#define INPUT_FILE "input.txt"
+#define INPUT_FILE "Porto_taxi_data_test_partial_trajectories_orig.txt"
 #define GLOBAL_SIZE 1024
 #define LOCAL_SIZE 64
 
@@ -226,7 +226,7 @@ int main(int argc, char** argv){
       }
       cout << endl;
    }
-
+   cout<<endl<<endl;
    
 
    for(size_t i=0; i<posSize; i+=2) {
@@ -234,12 +234,14 @@ int main(int argc, char** argv){
       if(sizes[i/2]==0) {continue;}
       cl_uint currSize = sizes[i/2]-7; //7 irrelevant commas
       cl_uint finalSize = (pos[i+1]-commPos[currStart+7]-1);
-      cl_uint* currCommas = &commPos[currStart+7];
-      currCommas[0]+=2;
+      cl_uint* currCommas = (commPos+currStart+7);
+      currCommas[0]+=1;
+
       cl_uint posTracker2 = 0;
       cl_mem pos_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | 
             CL_MEM_COPY_HOST_PTR, sizeof(cl_uint), &posTracker2, &err);
       error_handler(err, "Failed to create 'pos_ptr' buffer");
+
       cl_mem startPos = clCreateBuffer(context, CL_MEM_READ_WRITE | 
             CL_MEM_COPY_HOST_PTR, currSize*sizeof(cl_uint), &currCommas, &err);
       error_handler(err, "Failed to create 'startPos' buffer");
@@ -259,6 +261,8 @@ int main(int argc, char** argv){
       errors.push_back(clSetKernelArg(flipCoords, 8, sizeof(cl_uint), NULL));          //y_len
       errors.push_back(clSetKernelArg(flipCoords, 9, sizeof(cl_mem), &output_line));   //output_string
       errors.push_back(clSetKernelArg(flipCoords, 10, sizeof(cl_uint), &currCommas[0]));//start_location
+      errors.push_back(clSetKernelArg(flipCoords, 11, sizeof(cl_bool), NULL));
+      errors.push_back(clSetKernelArg(flipCoords, 12, sizeof(cl_uint), NULL));
       error_handler(errors, "Couldn't set args for flipCoords");
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
@@ -268,6 +272,7 @@ int main(int argc, char** argv){
       err = clEnqueueReadBuffer(queue, output_line, CL_TRUE, 0, 
                   finalSize*sizeof(cl_char), output_str, 0, NULL, NULL);
       clFinish(queue);
+      output_str[finalSize-1] = '\0';
       
       cl_uint tag_length = commPos[currStart]-currStart+1;
       cout<<chunk.substr(currStart, tag_length)<<'\"';
