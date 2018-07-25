@@ -295,15 +295,15 @@ __kernel void flipCoords(
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          
-         *curr_pos = atomic_inc(pos_ptr);
-         if(*curr_pos>=num_pairs) {
+         curr_pos = atomic_inc(pos_ptr);
+         if(curr_pos>=num_pairs) {
             return;
          }
 
-         *loc_length = start_positions[(*curr_pos)+1+currStart]-start_positions[*curr_pos+currStart]-3;
+         loc_length = start_positions[(curr_pos)+1+currStart]-start_positions[curr_pos+currStart]-3;
          *found=false;
-         *mid=0;
-         loc_start = start_positions[*curr_pos+currStart];
+         mid=0;
+         loc_start = start_positions[curr_pos+currStart];
          for(uint i=0; i<11; i++) {
             printf("%u ", start_positions[i+currStart]);
          }
@@ -312,23 +312,23 @@ __kernel void flipCoords(
       barrier(CLK_LOCAL_MEM_FENCE);
       
       
-      uint len = *loc_length;
-      uint loc_mid = *mid;
-      uint loc_y_len = *y_len;
+      uint len = loc_length;
+      uint loc_mid = mid;
+      uint loc_y_len = y_len;
 
 
       
       
       char c = (lid+3<len) ? input_string[loc_start+lid+3] : ' ';
       for(uint i = 3; i<len; i+=wg_size) {
-         //if(*mid!=0){break;}
+         //if(mid!=0){break;}
          
 
          if(c == SEP) {
             
-            *mid = lid+i;
-            *y_len = len - (*mid + 1);
-            //output_string[loc_start+*y_len+2] = ',';
+            mid = lid+i;
+            y_len = len - (mid + 1);
+            //output_string[loc_start+y_len+2] = ',';
             
             
          }
@@ -336,10 +336,10 @@ __kernel void flipCoords(
       }
       barrier(CLK_LOCAL_MEM_FENCE); 
       /*
-      for(uint i = 2; i<*loc_length; i+=wg_size) {
-         if(lid+i!=*mid && lid+i<*loc_length) {
-            uint target = (lid+i>*mid) ? lid + i - *mid - 1 : *y_len + lid + i - 1;
-            output_string[target] = input_string[start_positions[*curr_pos+currStart]+i+lid];
+      for(uint i = 2; i<loc_length; i+=wg_size) {
+         if(lid+i!=mid && lid+i<loc_length) {
+            uint target = (lid+i>mid) ? lid + i - mid - 1 : y_len + lid + i - 1;
+            output_string[target] = input_string[start_positions[curr_pos+currStart]+i+lid];
          }
       }
       barrier(CLK_LOCAL_MEM_FENCE);
