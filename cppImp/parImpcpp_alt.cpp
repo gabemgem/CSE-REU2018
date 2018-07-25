@@ -247,18 +247,12 @@ int main(int argc, char** argv){
 
       errors.push_back(clSetKernelArg(flipCoords, 0, sizeof(cl_mem), &inputString));   //input_string
       errors.push_back(clSetKernelArg(flipCoords, 1, sizeof(cl_mem), &finalRes));      //start_positions
-      errors.push_back(clSetKernelArg(flipCoords, 2, sizeof(cl_uint), &currSize));     //num_pairs
-      errors.push_back(clSetKernelArg(flipCoords, 3, sizeof(cl_mem), &pos_ptr2));      //pos_ptr
-      errors.push_back(clSetKernelArg(flipCoords, 4, sizeof(cl_uint), &finalSize));    //finalSize
-      errors.push_back(clSetKernelArg(flipCoords, 5, sizeof(cl_uint), NULL));          //curr_pos
-      errors.push_back(clSetKernelArg(flipCoords, 6, sizeof(cl_uint), NULL));          //loc_length
-      errors.push_back(clSetKernelArg(flipCoords, 7, sizeof(cl_uint), NULL));          //mid
-      errors.push_back(clSetKernelArg(flipCoords, 8, sizeof(cl_uint), NULL));          //y_len
-      errors.push_back(clSetKernelArg(flipCoords, 9, sizeof(cl_mem), &output_line));   //output_string
-      errors.push_back(clSetKernelArg(flipCoords, 10, sizeof(cl_uint), &commPos[currStart]));//start_location
-      errors.push_back(clSetKernelArg(flipCoords, 11, sizeof(cl_bool), NULL));
-      errors.push_back(clSetKernelArg(flipCoords, 12, sizeof(cl_uint), NULL));
-      errors.push_back(clSetKernelArg(flipCoords, 13, sizeof(cl_uint), &currStart));
+      errors.push_back(clSetKernelArg(flipCoords, 2, sizeof(cl_mem), &pos_ptr2));      //pos_ptr
+      errors.push_back(clSetKernelArg(flipCoords, 3, sizeof(cl_mem), &output_line));   //output_string
+      errors.push_back(clSetKernelArg(flipCoords, 4, sizeof(cl_uint), &currSize));     //num_pairs
+      errors.push_back(clSetKernelArg(flipCoords, 5, sizeof(cl_uint), &finalSize));    //finalSize
+      errors.push_back(clSetKernelArg(flipCoords, 6, sizeof(cl_uint), &commPos[currStart]));//start_location
+      errors.push_back(clSetKernelArg(flipCoords, 7, sizeof(cl_uint), &currStart));   //currStart
       error_handler(errors, "Couldn't set args for flipCoords");
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
