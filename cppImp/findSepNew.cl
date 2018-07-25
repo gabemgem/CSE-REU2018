@@ -278,7 +278,9 @@ __kernel void flipCoords(
    __local uint* mid,               //Holds location of the comma in a pair
    __local uint* y_len,             //Holds length of y coord for the pair
    __global char* output_string,     //Polyline output
-   uint start_location
+   uint start_location,
+   __local bool* found,
+   __local uint* loc_start2
       ) {
 
    
@@ -293,27 +295,50 @@ __kernel void flipCoords(
       }
    }
 
-   
+   __local uint loc_start;
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
+         
          *curr_pos = atomic_inc(pos_ptr);
+         if(*curr_pos>=num_pairs) {
+            return;
+         }
+
          *loc_length = start_positions[(*curr_pos)+1]-start_positions[*curr_pos]-3;
+         *found=false;
+         *mid=0;
+         loc_start = start_positions[0];
+         for(uint i=0; i<11; i++) {
+            printf("%u ", start_positions[i]);
+         }
+
       }
       barrier(CLK_LOCAL_MEM_FENCE);
       
+      
+      uint len = *loc_length;
+      uint loc_mid = *mid;
+      uint loc_y_len = *y_len;
 
-      for(uint i = 2; i<*loc_length; i+=wg_size) {
-         if(i+lid<*loc_length) {
+
+      
+      
+      char c = (lid+3<len) ? input_string[loc_start+lid+3] : ' ';
+      for(uint i = 3; i<len; i+=wg_size) {
+         //if(*mid!=0){break;}
+         
+
+         if(c == SEP) {
             
-            if(input_string[i+lid+start_positions[*curr_pos]] == SEP) {
-               *mid = lid+i;
-               *y_len = *loc_length - (*mid + 1);
-               output_string[start_positions[*curr_pos]+*y_len+2] = ',';
-               break;
-            }
+            *mid = lid+i;
+            *y_len = len - (*mid + 1);
+            //output_string[loc_start+*y_len+2] = ',';
+            
+            
          }
+          
       }
-      barrier(CLK_LOCAL_MEM_FENCE);
+      barrier(CLK_LOCAL_MEM_FENCE); 
       /*
       for(uint i = 2; i<*loc_length; i+=wg_size) {
          if(lid+i!=*mid && lid+i<*loc_length) {
