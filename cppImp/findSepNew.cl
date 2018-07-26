@@ -285,7 +285,7 @@ __kernel void flipCoords(
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
          char result = input_string[start_positions[currStart] + gid+i + 1];
-         output_string[gid+i] = ((result == OPEN) || (result == CLOSE) || (result == '"')) ?
+         output_string[gid+i] = ((result == OPEN) || (result == CLOSE) || (result == '"') || (result == SEP)) ?
                                  result : ' ';
          // output_string[gid+i] = result;
       }

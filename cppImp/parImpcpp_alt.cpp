@@ -255,8 +255,8 @@ int main(int argc, char** argv){
       clFinish(queue);
       output_str[finalSize] = '\0';
       
-      // cl_uint tag_length = commPos[currStart]-currStart+1;
-      // cout<<chunk.substr(currStart, tag_length)<<'\"';
+      cl_uint tag_length = commPos[currStart]-currStart+1;
+      cout<<chunk.substr(currStart, tag_length)<<'\"';
       for(cl_uint i=0; i<finalSize; ++i) {
          cout<<output_str[i];
       }
