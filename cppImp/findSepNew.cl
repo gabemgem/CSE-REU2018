@@ -285,9 +285,8 @@ __kernel void flipCoords(
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
          char result = input_string[start_positions[currStart] + gid+i + 1];
-         output_string[gid+i] = ((result == OPEN) || (result == CLOSE) || (result == '"')) ?
-                                 result : ' ';
-         // output_string[gid+i] = result;
+         // output_string[gid+i] = ((result == OPEN) || (result == CLOSE) || (result == '"')) ? result : ' ';
+         output_string[gid+i] = result;
       }
    }
 
@@ -314,11 +313,6 @@ __kernel void flipCoords(
       }
       barrier(CLK_LOCAL_MEM_FENCE);
       
-      
-      // uint len = loc_length;
-      // uint loc_mid = mid;
-      // uint loc_y_len = y_len;
-      
       for(uint i = 0; i<loc_length; i+=wg_size) {
          uint index = loc_start + lid + i;
          if(index < loc_end){
@@ -326,7 +320,7 @@ __kernel void flipCoords(
                mid = index;
                y_len = loc_length - (mid - loc_start) - 2;
                output_string[loc_start + y_len - lineStart - 1] = ',';
-               //output_string[loc_start + y_len - lineStart] = ' ';
+               output_string[loc_start + y_len - lineStart] = ' ';
             }
          }
       }
@@ -340,12 +334,12 @@ __kernel void flipCoords(
             uint target;
             if(index > mid + 1){
                target = loc_start + (index - mid - 1) - lineStart - 2;
-               output_string[target] = input_string[index];
             }
-            // if(index < mid){
-            //    target = index + 2 - lineStart;
-            // }
-            
+            if(index < mid){
+               target = index - lineStart - 1 + y_len + 2;
+               
+            }
+            output_string[target] = input_string[index];
          }
       }
       
