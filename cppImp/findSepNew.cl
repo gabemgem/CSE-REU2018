@@ -275,7 +275,7 @@ __kernel void flipCoords(
    __global char* output_string,    //Polyline output
    uint num_pairs,                  //Number of pairs in polyline
    uint finalSize,                  //size of output_string
-   uint currStart                  //Start of polyline
+   uint currStart                   //Start of polyline
    ) {
 
    
@@ -285,7 +285,6 @@ __kernel void flipCoords(
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
          char result = input_string[start_positions[currStart] + gid+i + 1];
-         // output_string[gid+i] = ((result == OPEN) || (result == CLOSE) || (result == '"')) ? result : ' ';
          output_string[gid+i] = result;
       }
    }
@@ -306,8 +305,6 @@ __kernel void flipCoords(
                      : start_positions[currStart + curr_pos + 1] - 1;
          
          loc_length = loc_end - loc_start;
-
-         // printf("%u: %u, %u, %u\n", curr_pos, loc_start, loc_end, loc_length);
 
          mid=0;
       }
