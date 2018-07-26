@@ -14,8 +14,8 @@
 
 #define KERNEL_FILE "findSepNew.cl"
 #define INPUT_FILE "Porto_taxi_data_test_partial_trajectories_orig.txt"
-#define GLOBAL_SIZE 1024
-#define LOCAL_SIZE 64
+#define GLOBAL_SIZE 2048
+#define LOCAL_SIZE 128
 
 using namespace std;
 
@@ -267,28 +267,33 @@ int main(int argc, char** argv){
       clReleaseMemObject(output_line);
    }
 
-   free(commPos);
-   free(sizes);
-   free(pos);
+
+
 
    //Freeing CL Objects
+   
    clReleaseMemObject(inputString);
    clReleaseMemObject(newLineBuff);
    clReleaseMemObject(posBuff);
    clReleaseMemObject(finalRes);
    clReleaseMemObject(resSizes);
    clReleaseMemObject(pos_ptr);
-
+   
    clReleaseKernel(newLineAlt);
    clReleaseKernel(getLinePos);
    clReleaseKernel(addScanStep);
    clReleaseKernel(addPostScanStep);
    clReleaseKernel(findSep);
-
+   clReleaseKernel(flipCoords);
+   
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseDevice(device);
    clReleaseContext(context);
+   
+   free(sizes);
+   free(pos);
+   free(commPos);
 
    return 0;
 }

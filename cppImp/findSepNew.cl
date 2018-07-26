@@ -282,7 +282,9 @@ __kernel void flipCoords(
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
 
-   
+   if(gid==0) {
+      start_positions[currStart]+=1;
+   }
    
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
@@ -332,6 +334,8 @@ __kernel void flipCoords(
             }
          }
       }
+      
+      
       barrier(CLK_LOCAL_MEM_FENCE); 
       
       for(uint i = 0; i<loc_length; i+=wg_size) {
@@ -348,6 +352,7 @@ __kernel void flipCoords(
             output_string[target] = input_string[index];
          }
       }
+      
       barrier(CLK_LOCAL_MEM_FENCE);
       
    }
