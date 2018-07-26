@@ -281,10 +281,6 @@ __kernel void flipCoords(
    
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
-
-   if(gid==0) {
-      start_positions[currStart]+=1;
-   }
    
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
@@ -330,7 +326,7 @@ __kernel void flipCoords(
                mid = index;
                y_len = loc_length - (mid - loc_start) - 2;
                output_string[loc_start + y_len - lineStart - 1] = ',';
-               output_string[loc_start + y_len - lineStart] = ' ';
+               //output_string[loc_start + y_len - lineStart] = ' ';
             }
          }
       }
@@ -344,12 +340,12 @@ __kernel void flipCoords(
             uint target;
             if(index > mid + 1){
                target = loc_start + (index - mid - 1) - lineStart - 2;
+               output_string[target] = input_string[index];
             }
             // if(index < mid){
-            //    target = loc_start - index;
+            //    target = index + 2 - lineStart;
             // }
             
-            output_string[target] = input_string[index];
          }
       }
       
