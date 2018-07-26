@@ -272,12 +272,11 @@ __kernel void flipCoords(
    __global char* input_string,     //The original string
    __global uint* start_positions,  //Array of comma locations between pairs
    __global uint* pos_ptr,          //WG's atomically increment to choose pair
-   __global char* output_string,     //Polyline output
-   uint num_pairs,        //Number of pairs in polyline
-   uint finalSize,
-   uint start_location,
-   uint currStart
-      ) {
+   __global char* output_string,    //Polyline output
+   uint num_pairs,                  //Number of pairs in polyline
+   uint finalSize,                  //size of output_string
+   uint currStart                  //Start of polyline
+   ) {
 
    
    uint gid = get_global_id(0), lid = get_local_id(0);
@@ -287,64 +286,70 @@ __kernel void flipCoords(
    
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
-         char result = input_string[start_location+gid+i];
-
-         output_string[gid+i] = result;
+         char result = input_string[start_positions[currStart] + gid+i + 1];
+         output_string[gid+i] = ((result == OPEN) || (result == CLOSE) || (result == '"')) ?
+                                 result : ' ';
+         // output_string[gid+i] = result;
       }
    }
 
-   __local uint loc_start, curr_pos, loc_length, mid, y_len;
+   __local uint loc_start, loc_end, curr_pos, loc_length, mid, y_len, lineStart;
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          
          curr_pos = atomic_inc(pos_ptr);
-         if(curr_pos>=num_pairs) {
-            return;
-         }
+         if(curr_pos >= num_pairs) return;
+         
+         lineStart = start_positions[currStart];
 
-         loc_length = start_positions[(curr_pos)+1+currStart]-start_positions[curr_pos+currStart]-3;
+         loc_start = start_positions[currStart + curr_pos];
+         loc_start += ((!curr_pos) ? 4 : 3);
+
+         loc_end = (curr_pos == num_pairs - 1) ? lineStart + finalSize - 2
+                     : start_positions[currStart + curr_pos + 1] - 1;
+         
+         loc_length = loc_end - loc_start;
+
+         // printf("%u: %u, %u, %u\n", curr_pos, loc_start, loc_end, loc_length);
+
          mid=0;
-         loc_start = start_positions[curr_pos+currStart];
-         for(uint i=0; i<11; i++) {
-            printf("%u ", start_positions[i+currStart]);
-         }
-
       }
       barrier(CLK_LOCAL_MEM_FENCE);
       
       
-      uint len = loc_length;
-      uint loc_mid = mid;
-      uint loc_y_len = y_len;
-
-
+      // uint len = loc_length;
+      // uint loc_mid = mid;
+      // uint loc_y_len = y_len;
       
-      
-      char c = (lid+3<len) ? input_string[loc_start+lid+3] : ' ';
-      for(uint i = 3; i<len; i+=wg_size) {
-         //if(mid!=0){break;}
-         
-
-         if(c == SEP) {
-            
-            mid = lid+i;
-            y_len = len - (mid + 1);
-            //output_string[loc_start+y_len+2] = ',';
-            
-            
+      for(uint i = 0; i<loc_length; i+=wg_size) {
+         uint index = loc_start + lid + i;
+         if(index < loc_end){
+            if(input_string[index] == SEP){
+               mid = index;
+               y_len = loc_length - (mid - loc_start) - 2;
+               output_string[loc_start + y_len - lineStart - 1] = ',';
+               output_string[loc_start + y_len - lineStart] = ' ';
+            }
          }
-          
       }
       barrier(CLK_LOCAL_MEM_FENCE); 
-      /*
-      for(uint i = 2; i<loc_length; i+=wg_size) {
-         if(lid+i!=mid && lid+i<loc_length) {
-            uint target = (lid+i>mid) ? lid + i - mid - 1 : y_len + lid + i - 1;
-            output_string[target] = input_string[start_positions[curr_pos+currStart]+i+lid];
+      
+      for(uint i = 0; i<loc_length; i+=wg_size) {
+         uint index = loc_start + lid + i;
+         if(index != mid && index < loc_end) {
+            uint target;
+            if(index > mid + 1){
+               target = loc_start + (index - mid - 1) - lineStart - 2;
+            }
+            // if(index < mid){
+            //    target = loc_start - index;
+            // }
+            
+            output_string[target] = input_string[index];
          }
       }
       barrier(CLK_LOCAL_MEM_FENCE);
-      */
+      
    }
    
    
