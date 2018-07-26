@@ -224,10 +224,9 @@ int main(int argc, char** argv){
 
    for(size_t i=0; i<posSize; i+=2) {
       cl_uint currStart = pos[i]+7;
-      if(sizes[i/2]==0) {continue;}
+      if(sizes[i/2] == 0) continue;
       cl_uint currSize = sizes[i/2]-7; //7 irrelevant commas
-      cl_uint finalSize = (pos[i+1]-commPos[currStart]-1);
-
+      cl_uint finalSize = pos[i+1] - commPos[currStart] - 1;
 
       cl_uint posTracker2 = 0;
       cl_mem pos_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | 
@@ -244,25 +243,24 @@ int main(int argc, char** argv){
       errors.push_back(clSetKernelArg(flipCoords, 3, sizeof(cl_mem), &output_line));   //output_string
       errors.push_back(clSetKernelArg(flipCoords, 4, sizeof(cl_uint), &currSize));     //num_pairs
       errors.push_back(clSetKernelArg(flipCoords, 5, sizeof(cl_uint), &finalSize));    //finalSize
-      errors.push_back(clSetKernelArg(flipCoords, 6, sizeof(cl_uint), &commPos[currStart]));//start_location
-      errors.push_back(clSetKernelArg(flipCoords, 7, sizeof(cl_uint), &currStart));   //currStart
+      errors.push_back(clSetKernelArg(flipCoords, 6, sizeof(cl_uint), &currStart));   //currStart
       error_handler(errors, "Couldn't set args for flipCoords");
 
       err = clEnqueueNDRangeKernel(queue, flipCoords, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
       error_handler(err, "Couldn't enqueue flipCoords");
 
-      cl_char* output_str = (cl_char*)malloc(finalSize*sizeof(cl_char));
+      cl_char* output_str = (cl_char*)malloc((finalSize+1)*sizeof(cl_char));
       err = clEnqueueReadBuffer(queue, output_line, CL_TRUE, 0, 
                   finalSize*sizeof(cl_char), output_str, 0, NULL, NULL);
       clFinish(queue);
-      output_str[finalSize-1] = '\0';
+      output_str[finalSize] = '\0';
       
-      cl_uint tag_length = commPos[currStart]-currStart+1;
-      cout<<chunk.substr(currStart, tag_length)<<'\"';
+      // cl_uint tag_length = commPos[currStart]-currStart+1;
+      // cout<<chunk.substr(currStart, tag_length)<<'\"';
       for(cl_uint i=0; i<finalSize; ++i) {
          cout<<output_str[i];
       }
-      cout<<endl<<endl;
+      cout << "\n" << endl;
       
       free(output_str);
       clReleaseMemObject(pos_ptr2);
