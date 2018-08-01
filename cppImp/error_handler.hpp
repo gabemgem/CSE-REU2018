@@ -5,6 +5,7 @@
 #include <string>
 #include <CL/cl.hpp>
 
+//Return CL error
 std::string get_error_message(cl_int err){
    std::string error_message;
    
@@ -148,7 +149,7 @@ std::string get_error_message(cl_int err){
    return error_message;
 }
 
-// Handles an error from OpenCL
+// Handles an error from OpenCL and an optional message
 void error_handler(cl_int err, std::string message = "") {
 
    if(err == CL_SUCCESS)

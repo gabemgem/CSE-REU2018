@@ -3,8 +3,11 @@
 #define CLOSE ']'
 #define ESC '\\'
 #define NEWLINE '\n'
+
+//The identity for boolean function composition
 #define IDENTITY 2
 
+/* Function to compute g(f) */
 inline char compose(char f, char g) {
 	char h = 0;
 
@@ -16,15 +19,19 @@ inline char compose(char f, char g) {
 }
 
 
-/* Finds newline characters and marks them*/
-__kernel void newLine(__global char * input, __global uint * output, uint size,
-		__global int* out_pos, __global uint* pos_ptr, uint nlines){
+/* Finds newline characters and marks them */
+__kernel void newLine(__global char * input, 
+                      __global uint * output,//Mark location of newlines with 1's 
+                      uint size,             //Size of input
+		                __global int* out_pos, //Array of newline locations in no particular order
+                      __global uint* pos_ptr,//uint to keep track of index to put location into
+                      uint nlines            //Number of lines to read
+){
    uint gid = get_global_id(0);
    uint gsize = get_global_size(0);
    for(uint i = 0; i < size; i+=gsize) {
 	   if(gid+i < size){
 	      output[gid+i] = (input[gid+i] == NEWLINE);
-	      //out_pos[gid+i] = (input[gid+i] == NEWLINE) ? gid+i : 0;
 	      
 	      if(input[gid+i] == NEWLINE) {
 	      	out_pos[atomic_inc(pos_ptr)]=gid+i;
@@ -33,13 +40,15 @@ __kernel void newLine(__global char * input, __global uint * output, uint size,
 	      		return;
 	      	}
 	      }
-	      
 	   }
 	}
 }
 
 /* Marks the position of newline charaters */
-__kernel void newLineAlt(__global char * input, __global uint * output, uint size){
+__kernel void newLineAlt(__global char * input, 
+                         __global uint * output,//Mark location of newlines with 1's
+                         uint size              //Size of input
+){
    uint gid = get_global_id(0);
    uint gsize = get_global_size(0);
    for(uint i = 0; i < size; i+=gsize) {
@@ -49,9 +58,11 @@ __kernel void newLineAlt(__global char * input, __global uint * output, uint siz
    }
 }
 
-/* Records the start/end of each line after performing a
+/* 
+   Records the start/end of each line after performing a
    parallel scan add on the output of newLineAlt;
-   assumed that first elem is 0 and the last is "chunk size" - 1 */
+   assumed that first elem is 0 and the last is "chunk size" - 1 
+*/
 __kernel void getLinePos(__global uint * data, __global uint * output, uint size){
    uint gid = get_global_id(0);
    uint gsize = get_global_size(0);
@@ -71,8 +82,10 @@ __kernel void getLinePos(__global uint * data, __global uint * output, uint size
    }
 }
 
-/* addScanStep and addPostScanStep used only for finding the postions
-   of lines in data chunck */
+/* 
+   addScanStep and addPostScanStep used only for finding the postions
+   of lines in data chunck 
+*/
 __kernel void addScanStep(__global uint* data, uint size, uint d){
    uint gid = get_global_id(0);
 
@@ -167,7 +180,12 @@ inline void parScanAdd(__local uint* data, uint size){
 
 /* NOTE: It may be slightly more efficient to use atomic function to 
    select the first PE to respond to do single-person tasks
-   (ex: setting position and saving previous values) */
+   (ex: setting position and saving previous values) 
+
+   Kernel to find the separators in an input string
+   Each workgroup takes a line to parse in a queue-like
+   manner.
+*/
 __kernel void findSep(
    __global char *input_string,  //array with the input
    __global uint *input_pos,     //array of start/end position pairs for each line
@@ -268,6 +286,12 @@ __kernel void findSep(
 }
 
 
+/* 
+   Kernel to flip coordinates in the polyline
+   Each workgroup handles a single pair of coordinates
+   Only flips coordinates in one line at a time
+   This is helps minimize the irregularity
+*/
 __kernel void flipCoords(
    __global char* input_string,     //The original string
    __global uint* start_positions,  //Array of comma locations between pairs
@@ -282,6 +306,7 @@ __kernel void flipCoords(
    uint gid = get_global_id(0), lid = get_local_id(0);
    uint glob_size = get_global_size(0), wg_size = get_local_size(0);
    
+   //Copy current part of input_string to output_string
    for(uint i = 0; i < finalSize; i += glob_size) {
       if(gid+i<finalSize) {
          char result = input_string[start_positions[currStart] + gid+i + 1];
@@ -289,7 +314,14 @@ __kernel void flipCoords(
       }
    }
 
-   __local uint loc_start, loc_end, curr_pos, loc_length, mid, y_len, lineStart;
+   //Local variables
+   __local uint loc_start; //position of the start of current pair
+   __local uint loc_end;   //position of the end of current pair
+   __local uint curr_pos;  //
+   __local uint loc_length;
+   __local uint mid;
+   __local uint y_len;
+   __local uint lineStart;
    while(atomic_add(pos_ptr, 0)<num_pairs) {
       if(lid==0) {
          

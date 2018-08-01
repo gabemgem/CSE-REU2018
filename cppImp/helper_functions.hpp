@@ -7,14 +7,17 @@
 #include <cstdlib>
 #include <CL/cl.hpp>
 
+//Chunk from input file to process
 #define CHUNK_SIZE 2048
 
 #ifndef DEVICE_TYPE
 #define DEVICE_TYPE CL_DEVICE_TYPE_GPU
 #endif
 
-/* Reads in a chunk of data from file. Ensures that  the chunk
-   starts/ends on with a complete line.
+/* 
+   Reads in a chunk of data from file. Ensures that the chunk
+   starts/ends on with a complete line. Saves any excess in 
+   residual.
 */
 void read_chunk(std::ifstream & file, std::string & chunk, std::string & residual){
    unsigned int size = chunk.size();
@@ -67,6 +70,7 @@ cl_int pad_num(cl_int old) {
    return new_val;
 }
 
+/* Returns log_2(val) */
 cl_uint lg(cl_int val){
    cl_uint out = 0, cpy = val;
    while(cpy > 1){
@@ -78,6 +82,7 @@ cl_uint lg(cl_int val){
    return out;
 }
 
+/* Create the CL Device from the first availabe device of type DEVICE_TYPE */
 cl_device_id create_device() {
    cl_int err;
 
@@ -102,10 +107,11 @@ cl_device_id create_device() {
       }
    }
    error_handler(err, "Couldn't access any devices of specified type");
-
+   free(platforms);
    return device;
 }
 
+/* Builds the CL kernels from filename */
 cl_program build_program(cl_context context, cl_device_id dev, std::string filename){
    
    cl_program program;
@@ -114,7 +120,7 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
    size_t program_size, log_size;
    int err;
 
-   /* Read program file and place content into buffer */
+   // Read program file and place content into buffer
    program_handle = fopen(filename.c_str(), "r");
    if(program_handle == NULL) {
       perror("Couldn't find the program file");
@@ -128,17 +134,17 @@ cl_program build_program(cl_context context, cl_device_id dev, std::string filen
    fread(program_buffer, sizeof(char), program_size, program_handle);
    fclose(program_handle);
 
-   /* Create program from file */
+   // Create program from file
    program = clCreateProgramWithSource(context, 1, 
       (const char**)&program_buffer, &program_size, &err);
    error_handler(err, "Couldn't create the program");
    free(program_buffer);
 
-   /* Build program */
+   // Build program 
    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
    if(err < 0) {
 
-      /* Find size of log and print to std output */
+      // Find size of log and print to std output
       clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
             0, NULL, &log_size);
       program_log = (char*) malloc(log_size + 1);
