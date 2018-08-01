@@ -317,14 +317,16 @@ __kernel void flipCoords(
    //Local variables
    __local uint loc_start; //position of the start of current pair
    __local uint loc_end;   //position of the end of current pair
-   __local uint curr_pos;  //
-   __local uint loc_length;
-   __local uint mid;
-   __local uint y_len;
-   __local uint lineStart;
+   __local uint curr_pos;  //current pair to look at
+   __local uint loc_length;//length of current pair
+   __local uint mid;       //middle comma location
+   __local uint y_len;     //length of y coordinate
+   __local uint lineStart; //start position of current line
+
+   //loop through all pairs
    while(atomic_add(pos_ptr, 0)<num_pairs) {
+      //set up local variables
       if(lid==0) {
-         
          curr_pos = atomic_inc(pos_ptr);
          if(curr_pos >= num_pairs) return;
          
@@ -342,6 +344,7 @@ __kernel void flipCoords(
       }
       barrier(CLK_LOCAL_MEM_FENCE);
       
+      //find middle comma in current pair
       for(uint i = 0; i<loc_length; i+=wg_size) {
          uint index = loc_start + lid + i;
          if(index < loc_end){
@@ -357,14 +360,15 @@ __kernel void flipCoords(
       
       barrier(CLK_LOCAL_MEM_FENCE); 
       
+      //flip coordinates in current pair
       for(uint i = 0; i<loc_length; i+=wg_size) {
          uint index = loc_start + lid + i;
          if(index != mid && index < loc_end) {
             uint target;
-            if(index > mid + 1){
+            if(index > mid + 1){//y coordinate
                target = loc_start + (index - mid - 1) - lineStart - 2;
             }
-            if(index < mid){
+            if(index < mid){//x coordinate
                target = index - lineStart - 1 + y_len + 2;
                
             }
@@ -373,8 +377,5 @@ __kernel void flipCoords(
       }
       
       barrier(CLK_LOCAL_MEM_FENCE);
-      
    }
-   
-   
 }
