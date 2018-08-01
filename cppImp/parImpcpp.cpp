@@ -27,25 +27,31 @@ int main(int argc, char** argv){
    }
 
    //Get input file
-
    std::string chunk, residual;
    std::ifstream inputFile(ifile);
-
 
    if(!inputFile.is_open()) {
       exit(1);
    }
 
+
+   //Throw away first line (has heading)
    std::string garbage;
    std::getline(inputFile, garbage);
+
+
+   //read in chunk of data
    read_chunk(inputFile, chunk, residual);
 
+   //Converting chunk to c-string and getting size
    cl_char* c_chunk = (cl_char*)(chunk.c_str());
    cl_uint chunkSize = chunk.size();
 
+   //Setting global and local size; Global to next power of 2 from chunkSize
    size_t global_size = pad_num(chunkSize);
    size_t local_size = (LOCAL_SIZE <= global_size) ? LOCAL_SIZE : global_size;
 
+   //For handling errors in OpenCL
    cl_int err;
    vector<cl_int> errors;
 
@@ -61,36 +67,49 @@ int main(int argc, char** argv){
    error_handler(err, "Failed to create command queue");
 
 
-   //Create buffers
+   /** Creating buffers **/
+
+   //buffer for data chunk from file
    cl_mem inputString = clCreateBuffer(context, CL_MEM_READ_ONLY |
             CL_MEM_COPY_HOST_PTR, chunkSize, c_chunk, &err);
    error_handler(err, "Failed to create 'inputString' buffer");
 
+   //buffer for tracking position of '\n' characters
    cl_mem newLineBuff = clCreateBuffer(context, CL_MEM_READ_WRITE, 
             sizeof(cl_uint)*chunkSize, NULL, &err);
    error_handler(err, "Failed to create 'newLineBuff' buffer");
 
+   //buffer to store the positions of valid separators
    cl_mem finalRes = clCreateBuffer(context, CL_MEM_READ_WRITE, 
             sizeof(cl_uint)*chunkSize, NULL, &err);
    error_handler(err, "Failed to create 'finalRes' buffer");
 
 
-   //Creating kernels
+   /** Creating kernels **/
+
+   //marks locations of '\n' chars in a given buffer
    cl_kernel newLineAlt = clCreateKernel(program, "newLineAlt", &err);
    error_handler(err, "Failed to create 'newLineAlt' kernel");
 
+   //compiles an array of the starts and ends of lines from newline buffer mentioned
    cl_kernel getLinePos = clCreateKernel(program, "getLinePos", &err);
    error_handler(err, "Failed to create 'getLinePos' kernel");
    
+   //for performing the scan step of a parallel scanning addition on a global scale
    cl_kernel addScanStep = clCreateKernel(program, "addScanStep", &err);
    error_handler(err, "Failed to create 'addScanStep' kernel");
    
+   //for performing the post-scan step of a parallel scanning addition on a global scale
    cl_kernel addPostScanStep = clCreateKernel(program, "addPostScanStep", &err);
    error_handler(err, "Failed to create 'addPostScanStep' kernel");
    
+   //finds valid separators by parsing for delimited zones and returns positions of
+   //separators not within those zones
    cl_kernel findSep = clCreateKernel(program, "findSep", &err);
    error_handler(err, "Failed to create 'findSep' kernel");
 
+   //flips the order of the coordinates in the coordinate pairs of the polyline
+   //for a given line ( TODO: WRTIE WHY BROKEN )
    cl_kernel flipCoords = clCreateKernel(program, "flipCoords", &err);
    error_handler(err, "Failed to create 'flipCoords' kernel");
 
@@ -106,6 +125,14 @@ int main(int argc, char** argv){
    error_handler(err, "Failed to enqueue 'newLineAlt' kernel");
    
 
+   /**
+      Because there is no way to guarentee global synchronization between proceessing
+      elements for each iterations of parallel scanning addition on the device, you must
+      go back to the device as a means of sychronization at the end of each iteration.
+      "addScanStep" and "addPostScanStep" run one iteration of the scan and post scan
+      steps respectively.
+   */
+
    //Running addScanStep
    cl_uint depth = lg(global_size);
    for(cl_uint d=0; d < depth; ++d){
@@ -118,7 +145,6 @@ int main(int argc, char** argv){
                &global_size, &local_size, 0, NULL, NULL);
       error_handler(err, "Failed to enqueue 'addScanStep' kernel");
    }
-
 
    //Running addPostScanStep
    for(cl_uint stride = global_size/4; stride > 0; stride /= 2){
@@ -141,18 +167,31 @@ int main(int argc, char** argv){
    error_handler(err, "Failed to read 'newLineBuff' buffer");
 
    size_t numLines = newLineArr[chunkSize-1] + 1;
-   size_t posSize = 2 * numLines;
+   size_t posSize = 2 * numLines;      //size of the buffer for the starts and ends of lines
 
    free(newLineArr);
-   
-   cl_uint * pos = (cl_uint *)calloc(posSize, sizeof(cl_uint));
-   pos[0] = 0;
-   pos[posSize-1] = chunkSize;
 
+   /**NOTE: Since you can specify the offset at which to read in the buffer and how much
+            memory to read, you could just read the last value of the buffer (the only one 
+            needed to find numLines) instead of the whole buffer to an array.
+   */
+
+   //Initalizing the array of positions for the starts and ends of lines in the array
+   cl_uint * pos = (cl_uint *)calloc(posSize, sizeof(cl_uint));
+   pos[0] = 0;                         //already know the start of the first line to be at 0
+   pos[posSize-1] = chunkSize;         //already know the end of the last line to be at the
+                                       //end of the chunk
+
+   //Creating buffer for line start/end positions
    cl_mem posBuff = clCreateBuffer(context, CL_MEM_READ_WRITE 
             | CL_MEM_COPY_HOST_PTR, sizeof(cl_uint)*posSize, pos, &err);
    error_handler(err, "Failed to create 'posBuff' buffer");
 
+   /**
+      Each line will have some number of valid separators. Thus the size of the array of
+      positions for those valid separators could vary in size. We create a buffer to hold
+      the number of valid separators for each line here.
+   */
    cl_mem resSizes = clCreateBuffer(context, CL_MEM_READ_WRITE, 
             sizeof(cl_uint)*numLines, NULL, &err);
    error_handler(err, "Failed to create 'resSizes' buffer");
